@@ -1,4 +1,4 @@
-module github.com/tellor-io/bridge-signer/api
+module github.com/tellor-io/bridge-remote-signer/api
 
 go 1.24.0
 

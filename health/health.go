@@ -6,8 +6,8 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/tellor-io/bridge-signer/logging"
-	"github.com/tellor-io/bridge-signer/signer"
+	"github.com/tellor-io/bridge-remote-signer/logging"
+	"github.com/tellor-io/bridge-remote-signer/signer"
 )
 
 // Checker exposes HTTP liveness and readiness endpoints.

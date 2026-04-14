@@ -1,11 +1,11 @@
-module github.com/tellor-io/bridge-signer
+module github.com/tellor-io/bridge-remote-signer
 
 go 1.24.0
 
 require (
 	github.com/ethereum/go-ethereum v1.17.1
 	github.com/fortanix/sdkms-client-go v0.4.1
-	github.com/tellor-io/bridge-signer/api v0.0.0
+	github.com/tellor-io/bridge-remote-signer/api v0.0.0
 	google.golang.org/grpc v1.79.3
 	gopkg.in/yaml.v3 v3.0.1
 )
@@ -23,4 +23,4 @@ require (
 	gopkg.in/check.v1 v1.0.0-20180628173108-788fd7840127 // indirect
 )
 
-replace github.com/tellor-io/bridge-signer/api => ./api
+replace github.com/tellor-io/bridge-remote-signer/api => ./api

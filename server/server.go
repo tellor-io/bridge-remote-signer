@@ -13,9 +13,9 @@ import (
 	"google.golang.org/grpc/reflection"
 	"google.golang.org/grpc/status"
 
-	signerv1 "github.com/tellor-io/bridge-signer/api/gen/signer/v1"
-	"github.com/tellor-io/bridge-signer/logging"
-	"github.com/tellor-io/bridge-signer/signer"
+	signerv1 "github.com/tellor-io/bridge-remote-signer/api/gen/signer/v1"
+	"github.com/tellor-io/bridge-remote-signer/logging"
+	"github.com/tellor-io/bridge-remote-signer/signer"
 )
 
 // Server is the gRPC server that wraps the signing backend and exposes

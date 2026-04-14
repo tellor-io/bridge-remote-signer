@@ -11,12 +11,12 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/crypto"
-	bridgetls "github.com/tellor-io/bridge-signer/api/tls"
-	"github.com/tellor-io/bridge-signer/config"
-	"github.com/tellor-io/bridge-signer/health"
-	"github.com/tellor-io/bridge-signer/logging"
-	"github.com/tellor-io/bridge-signer/server"
-	"github.com/tellor-io/bridge-signer/signer"
+	bridgetls "github.com/tellor-io/bridge-remote-signer/api/tls"
+	"github.com/tellor-io/bridge-remote-signer/config"
+	"github.com/tellor-io/bridge-remote-signer/health"
+	"github.com/tellor-io/bridge-remote-signer/logging"
+	"github.com/tellor-io/bridge-remote-signer/server"
+	"github.com/tellor-io/bridge-remote-signer/signer"
 )
 
 func main() {

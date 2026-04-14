@@ -6,7 +6,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/tellor-io/bridge-signer/signer"
+	"github.com/tellor-io/bridge-remote-signer/signer"
 	"gopkg.in/yaml.v3"
 )
 
