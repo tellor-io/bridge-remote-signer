@@ -16,15 +16,14 @@ validator node (layer)
             bridge-signer
                     └── signer backend
                             ├── file     (soft-sign)
-                            ├── fortanix 
-                            └── yubihsm  
+                            ├── fortanixdsm 
+                            └── yubihsm  (not ready yet)
 ```
 
 ## Requirements
 
 - Go 1.24+
 - protoc (for regenerating proto files only)
-- YubiHSM2 SDK (only if building with `make build-yubihsm`)
 
 ## Setup
 
@@ -45,11 +44,8 @@ make proto
 ### 3. Build
 
 ```bash
-# Standard build (file + fortanix backends)
+# Standard build (file + fortanixdsm backends)
 make build
-
-# With YubiHSM2 support (requires libyubihsm-dev)
-make build-yubihsm
 
 # binary at ./bin/bridge-signer
 ```
@@ -99,18 +95,13 @@ See [config.example.yaml](config.example.yaml) for all options with comments.
 
 ```yaml
 signer:
-  backend: file                              # file | fortanix | yubihsm
+  backend: file                              # file | fortanixdsm 
   key_path: /path/to/bridge.key             # file backend
 
   # dsm_api_endpoint: https://amer.smartkey.io
   # dsm_api_key: your-api-key
   # dsm_key_id: your-key-id (UUID format)
   # dsm_key_name: my-bridge-key
-
-  # yubihsm_adapter: usb                    # yubihsm backend
-  # yubihsm_auth_key_id: 4                
-  # yubihsm_password_file: /path/to/pw
-  # yubihsm_key_id: 1
 
 server:
   listen_addr: "0.0.0.0:9191"
@@ -132,12 +123,7 @@ logging:
 | Backend | Key location |
 |---------|-------------|
 | `file` | Hex file on disk |
-| `fortanix` | FortanixDSM |
-| `yubihsm` | YubiHSM2 hardware device |
-
-The YubiHSM2 backend supports direct USB access via `libyubihsm` (no
-`yubihsm-connector` daemon required) and follows the same role-based
-authentication model as [TMKMS](https://github.com/iqlusioninc/tmkms).
+| `fortanixdsm` | FortanixDSM |
 
 ## Validator Configuration
 

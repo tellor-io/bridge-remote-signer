@@ -6,7 +6,7 @@ PROTO_FILE := $(PROTO_DIR)/signer/v1/signer.proto
 
 GOFLAGS    := -trimpath
 
-.PHONY: all build build-yubihsm clean proto
+.PHONY: all build clean proto
 
 all: build
 
@@ -14,11 +14,6 @@ build:
 	@echo ">> building $(BINARY)..."
 	@mkdir -p $(BUILD_DIR)
 	go build $(GOFLAGS) -o $(BUILD_DIR)/$(BINARY) ./cmd/bridge-signer
-
-build-yubihsm:
-	@echo ">> building $(BINARY) with YubiHSM support..."
-	@mkdir -p $(BUILD_DIR)
-	CGO_ENABLED=1 go build $(GOFLAGS) -tags yubihsm -o $(BUILD_DIR)/$(BINARY) ./cmd/bridge-signer
 
 
 proto:

@@ -6,7 +6,6 @@ import (
 	"os"
 	"time"
 
-	"github.com/tellor-io/bridge-remote-signer/signer"
 	"gopkg.in/yaml.v3"
 )
 
@@ -16,7 +15,6 @@ type Backend string
 const (
 	BackendFile        Backend = "file"
 	BackendFortanixDSM Backend = "fortanixdsm"
-	BackendYubiHSM     Backend = "yubihsm"
 )
 
 // Config is the top-level configuration for bridge-signer.
@@ -42,33 +40,15 @@ type SignerConfig struct {
 	DSMAPIKey      string `yaml:"dsm_api_key"`
 	DSMKeyID       string `yaml:"dsm_key_id"`
 	DSMKeyName     string `yaml:"dsm_key_name"`
-
-	// --- YubiHSM backend ---
-	// Adapter: "usb" for direct USB (default)
-	YubiHSMAdapter       signer.AdapterType `yaml:"yubihsm_adapter"`
-	YubiHSMConnectorAddr string             `yaml:"yubihsm_connector_addr"`
-	// Auth key ID. TMKMS convention: 1=admin, 2=operator, 3=auditor, 4=validator (sign-only).
-	YubiHSMAuthKeyID    int    `yaml:"yubihsm_auth_key_id"`
-	YubiHSMPassword     string `yaml:"yubihsm_password"`
-	YubiHSMPasswordFile string `yaml:"yubihsm_password_file"`
-	YubiHSMKeyID        int    `yaml:"yubihsm_key_id"`
-	YubiHSMSerialNumber string `yaml:"yubihsm_serial_number"`
 }
 
 func (c *SignerConfig) ToMap() map[string]any {
 	return map[string]any{
-		"key_path":               c.KeyPath,
-		"dsm_api_endpoint":       c.DSMAPIEndpoint,
-		"dsm_api_key":            c.DSMAPIKey,
-		"dsm_key_id":             c.DSMKeyID,
-		"dsm_key_name":           c.DSMKeyName,
-		"yubihsm_adapter":        string(c.YubiHSMAdapter),
-		"yubihsm_connector_addr": c.YubiHSMConnectorAddr,
-		"yubihsm_auth_key_id":    c.YubiHSMAuthKeyID,
-		"yubihsm_password":       c.YubiHSMPassword,
-		"yubihsm_password_file":  c.YubiHSMPasswordFile,
-		"yubihsm_key_id":         c.YubiHSMKeyID,
-		"yubihsm_serial_number":  c.YubiHSMSerialNumber,
+		"key_path":         c.KeyPath,
+		"dsm_api_endpoint": c.DSMAPIEndpoint,
+		"dsm_api_key":      c.DSMAPIKey,
+		"dsm_key_id":       c.DSMKeyID,
+		"dsm_key_name":     c.DSMKeyName,
 	}
 }
 
@@ -181,25 +161,10 @@ func (c *Config) validate() error {
 		if c.Signer.DSMKeyID == "" && c.Signer.DSMKeyName == "" {
 			return errors.New("signer.dsm_key_id or signer.dsm_key_name is required when backend is \"fortanixdsm\"")
 		}
-	case BackendYubiHSM:
-		if c.Signer.YubiHSMKeyID == 0 {
-			return errors.New("signer.yubihsm_key_id is required when backend is \"yubihsm\"")
-		}
-		if c.Signer.YubiHSMPassword == "" && c.Signer.YubiHSMPasswordFile == "" {
-			return errors.New("signer.yubihsm_password or signer.yubihsm_password_file is required when backend is \"yubihsm\"")
-		}
-		if c.Signer.YubiHSMPasswordFile != "" {
-			if _, err := os.Stat(c.Signer.YubiHSMPasswordFile); err != nil {
-				return fmt.Errorf("signer.yubihsm_password_file %q: %w", c.Signer.YubiHSMPasswordFile, err)
-			}
-		}
-		if c.Signer.YubiHSMAdapter == "http" && c.Signer.YubiHSMConnectorAddr == "" {
-			return errors.New("signer.yubihsm_connector_addr is required when yubihsm_adapter is \"http\"")
-		}
 	case "":
-		return errors.New("signer.backend is required (\"file\", \"fortanixdsm\", or \"yubihsm\")")
+		return errors.New("signer.backend is required (\"file\", \"fortanixdsm\")")
 	default:
-		return fmt.Errorf("signer.backend %q is not valid (must be \"file\", \"fortanixdsm\", or \"yubihsm\")", c.Signer.Backend)
+		return fmt.Errorf("signer.backend %q is not valid (must be \"file\", \"fortanixdsm\")", c.Signer.Backend)
 	}
 
 	// Server

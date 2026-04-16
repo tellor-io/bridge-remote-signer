@@ -3,9 +3,7 @@
 # Never commit config.yaml.
 
 signer:
-  # backend selects the signing backend: "file", "fortanixdsm", or "yubihsm".
-  # Use "yubihsm" with a YubiHSM2 device.
-  #   (requires building with: make build-yubihsm)
+  # backend selects the signing backend: "file", or "fortanixdsm".
   backend: file
 
   # --- file backend ---
@@ -17,22 +15,6 @@ signer:
   # dsm_api_key: your-api-key
   # dsm_key_id: your-key-id (UUID format)
   # dsm_key_name: my-bridge-key
-
-  # --- yubihsm backend ---
-  # yubihsm_adapter: "usb" for direct USB (default), "http" for yubihsm-connector
-  # yubihsm_adapter: usb
-  # yubihsm_auth_key_id: auth key on the device (TMKMS convention: 4 = validator, sign-only)
-  # yubihsm_auth_key_id: 4
-  # yubihsm_password_file: path to file containing the auth key password
-  # yubihsm_password_file: /etc/bridge-signer/yubihsm-password
-  # yubihsm_password: inline password (use password_file in production instead)
-  # yubihsm_password: validator-password
-  # yubihsm_key_id: object ID of the secp256k1 signing key on the device
-  # yubihsm_key_id: 1
-  # yubihsm_serial_number: target a specific device when multiple are connected (optional)
-  # yubihsm_serial_number: "0123456789"
-  # yubihsm_connector_addr: yubihsm-connector address (required when adapter is "http")
-  # yubihsm_connector_addr: localhost:12345
 
 server:
   # listen_addr: gRPC server listen address
