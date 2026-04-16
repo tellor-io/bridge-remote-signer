@@ -5,6 +5,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"io"
 	"os"
 	"os/signal"
 	"syscall"
@@ -147,6 +148,12 @@ func run() error {
 		shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 		defer cancel()
 		healthChecker.Stop(shutdownCtx)
+		// Close the signer backend if it supports it (e.g. YubiHSM session cleanup).
+		if closer, ok := s.(io.Closer); ok {
+			if err := closer.Close(); err != nil {
+				logger.Error("failed to close signer backend", "error", err)
+			}
+		}
 		return nil
 
 	case err := <-errCh:
