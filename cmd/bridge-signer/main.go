@@ -1,8 +1,14 @@
+//go:build !windows
+
+// bridge-signer is the gRPC remote signing daemon. The build is gated on
+// Unix: the signer relies on POSIX file mode bits for key file secrecy
+// (NTFS ACLs are not reflected by os.FileMode) and on SIGTERM for
+// graceful service stop. Refusing to build on Windows avoids shipping
+// a binary with silently weakened guarantees.
 package main
 
 import (
 	"context"
-	"errors"
 	"flag"
 	"fmt"
 	"os"
@@ -27,42 +33,28 @@ func main() {
 }
 
 func run() error {
-
 	var (
 		configPath = flag.String("config", "config.yaml", "path to config file")
 		// Subcommands
-		keygen = flag.Bool("keygen", false, "generate a new secp256k1 key file and exit")
-		keyOut = flag.String("out", "", "output path for generated key (used with --keygen)")
-		pubkey = flag.Bool("pubkey", false, "print the public key and operator address for a key file and exit")
-		keyIn  = flag.String("key", "", "key file path (used with --pubkey)")
+		keygen       = flag.Bool("keygen", false, "generate a new secp256k1 key file and exit")
+		importKey    = flag.Bool("import", false, "import an existing secp256k1 private key (hex from stdin) and exit")
+		show         = flag.Bool("show", false, "print the public key and addresses for an existing key file and exit")
+		export       = flag.Bool("export", false, "print the raw hex private key to stdout and exit")
+		keyOut       = flag.String("out", "", "output path for key file (used with --keygen or --import)")
+		keyIn        = flag.String("key", "", "path to an existing key file (used with --show or --export)")
+		passwordFile = flag.String("password-file", "", "path to password file (used with --keygen, --import, --show, or --export; prompts if unset)")
 	)
 	flag.Parse()
 
-	// keygen: generate a new secp256k1 key file
-	if *keygen {
-		if *keyOut == "" {
-			return errors.New("--out is required with --keygen")
-		}
-		if err := signer.GenerateKeyToFile(*keyOut); err != nil {
-			return fmt.Errorf("keygen failed: %w", err)
-		}
-		fmt.Printf("generated secp256k1 key at %s\n", *keyOut)
-
-		return nil
-	}
-
-	if *pubkey {
-		if *keyIn == "" {
-			return errors.New("--key is required with --pubkey")
-		}
-		pubKeyHex, ethAddr, err := signer.PublicKeyFromFile(*keyIn)
-		if err != nil {
-			return fmt.Errorf("pubkey failed: %w", err)
-		}
-		fmt.Printf("compressed public key : %s\n", pubKeyHex)
-		fmt.Printf("ethereum address      : %s\n", ethAddr)
-		fmt.Println("verify the ethereum address matches what is registered with the bridge contract")
-		return nil
+	switch {
+	case *keygen:
+		return runKeygen(*keyOut, *passwordFile)
+	case *importKey:
+		return runImport(*keyOut, *passwordFile)
+	case *show:
+		return runShow(*keyIn, *passwordFile)
+	case *export:
+		return runExport(*keyIn, *passwordFile)
 	}
 
 	// Load and validate config.

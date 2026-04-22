@@ -4,14 +4,15 @@ import (
 	"context"
 	"crypto/ecdsa"
 	"crypto/sha256"
-	"encoding/hex"
 	"errors"
 	"fmt"
 	"os"
 	"strings"
 	"sync"
+	"syscall"
 
 	"github.com/ethereum/go-ethereum/crypto"
+	"golang.org/x/term"
 )
 
 func init() {
@@ -25,7 +26,66 @@ func newFileSignerFromConfig(_ context.Context, raw map[string]any) (Signer, err
 	if !ok || keyPath == "" {
 		return nil, errors.New("signer.key_path is required when backend is \"file\"")
 	}
-	return NewFileSigner(keyPath)
+	pwFile, _ := raw["password_file"].(string)
+
+	password, err := loadFilePassword(keyPath, pwFile)
+	if err != nil {
+		return nil, err
+	}
+
+	return NewFileSigner(keyPath, password)
+}
+
+// loadFilePassword resolves the password used to decrypt the key file.
+// Precedence:
+//
+//   - pwFile set: read it from disk. Enforce 0600 perms (same bar as the
+//     key file itself, since this file is equivalent to the key once an
+//     attacker has it).
+//   - pwFile empty, key file is encrypted: prompt on stderr. Fail with a
+//     useful message if stdin is not a terminal (systemd, docker, CI).
+//   - pwFile empty, key file is plaintext: return "" (no password needed).
+func loadFilePassword(keyPath, pwFile string) (string, error) {
+	if pwFile != "" {
+		info, err := os.Stat(pwFile)
+		if err != nil {
+			return "", fmt.Errorf("cannot stat password file: %w", err)
+		}
+		if perm := info.Mode().Perm(); perm&0077 != 0 {
+			return "", fmt.Errorf(
+				"password file %s has permissions %04o; must not be readable by group or others (expected 0600)",
+				pwFile, perm,
+			)
+		}
+		data, err := os.ReadFile(pwFile)
+		if err != nil {
+			return "", fmt.Errorf("failed to read password file: %w", err)
+		}
+		return strings.TrimSpace(string(data)), nil
+	}
+
+	encrypted, err := IsKeyFileEncrypted(keyPath)
+	if err != nil {
+		return "", fmt.Errorf("failed to check if key file is encrypted: %w", err)
+	}
+	if !encrypted {
+		return "", nil
+	}
+
+	if !term.IsTerminal(int(syscall.Stdin)) {
+		return "", fmt.Errorf(
+			"key file %s is encrypted but stdin is not a terminal; set signer.password_file in config",
+			keyPath,
+		)
+	}
+
+	fmt.Fprint(os.Stderr, "Enter password for key file: ")
+	passBytes, err := term.ReadPassword(int(syscall.Stdin))
+	if err != nil {
+		return "", fmt.Errorf("failed to read password from terminal: %w", err)
+	}
+	fmt.Fprintln(os.Stderr)
+	return strings.TrimSpace(string(passBytes)), nil
 }
 
 // FileSigner implements Signer using a secp256k1 private key loaded from disk.
@@ -37,14 +97,15 @@ type FileSigner struct {
 	mu               sync.Mutex // protects against concurrent Sign calls
 }
 
-// NewFileSigner loads a secp256k1 private key from keyPath and returns a FileSigner.
-// keyPath must point to a file containing the hex-encoded 32-byte raw private key.
-func NewFileSigner(keyPath string) (*FileSigner, error) {
+// NewFileSigner loads a private key from the given file path.
+// The password parameter is only used if the key file is encrypted.
+// Pass an empty string for plaintext key files.
+func NewFileSigner(keyPath string, password string) (*FileSigner, error) {
 	if keyPath == "" {
 		return nil, errors.New("key_path is required for file signer backend")
 	}
 
-	privateKey, err := loadPrivateKey(keyPath)
+	privateKey, err := LoadPrivateKey(keyPath, password)
 	if err != nil {
 		return nil, fmt.Errorf("failed to load private key from %q: %w", keyPath, err)
 	}
@@ -87,43 +148,4 @@ func (s *FileSigner) GetPublicKey(_ context.Context) ([]byte, error) {
 	out := make([]byte, len(s.compressedPubKey))
 	copy(out, s.compressedPubKey)
 	return out, nil
-}
-
-// loadPrivateKey reads a hex-encoded secp256k1 private key from disk.
-func loadPrivateKey(path string) (*ecdsa.PrivateKey, error) {
-	// Ensure the key file isn't readable by others.
-	info, err := os.Stat(path)
-	if err != nil {
-		return nil, fmt.Errorf("cannot stat key file: %w", err)
-	}
-	if perm := info.Mode().Perm(); perm&0077 != 0 {
-		return nil, fmt.Errorf(
-			"key file %s has permissions %04o; must not be readable by group or others (expected 0600)",
-			path, perm,
-		)
-	}
-
-	data, err := os.ReadFile(path)
-	if err != nil {
-		return nil, fmt.Errorf("cannot read key file: %w", err)
-	}
-
-	// Strip whitespace and optional 0x prefix.
-	hexStr := strings.ToLower(strings.TrimSpace(string(data)))
-	hexStr = strings.TrimPrefix(hexStr, "0x")
-
-	keyBytes, err := hex.DecodeString(hexStr)
-	if err != nil {
-		return nil, fmt.Errorf("key file contains invalid hex: %w", err)
-	}
-	if len(keyBytes) != 32 {
-		return nil, fmt.Errorf("key must be 32 bytes, got %d", len(keyBytes))
-	}
-
-	privateKey, err := crypto.ToECDSA(keyBytes)
-	if err != nil {
-		return nil, fmt.Errorf("invalid secp256k1 private key: %w", err)
-	}
-
-	return privateKey, nil
 }

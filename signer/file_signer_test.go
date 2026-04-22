@@ -28,7 +28,7 @@ func TestFileSigner_SignAndRecover(t *testing.T) {
 	expectedSigBytes, err := hex.DecodeString(expectedSig)
 	requireNoError(t, err, "failed to decode expected signature")
 
-	signer, err := NewFileSigner(keyPath)
+	signer, err := NewFileSigner(keyPath, "")
 	requireNoError(t, err, "NewFileSigner failed")
 
 	msg := []byte("TellorLayer: Initial bridge signature A for operator tellorvaloper1test")
