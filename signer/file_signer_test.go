@@ -4,14 +4,15 @@ import (
 	"context"
 	"crypto/ecdsa"
 	"crypto/sha256"
-	"strings"
-
 	"encoding/hex"
 	"math/big"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
+	"github.com/cosmos/cosmos-sdk/crypto/keyring"
+	sdk "github.com/cosmos/cosmos-sdk/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/crypto/secp256k1"
 )
@@ -21,14 +22,18 @@ const (
 	evmAddr        = "0xd58F4A6c7B4fD62C55D3319191F5B1B8178EFfa3"
 	pubKeyHex      = "037545ddc4f44ede3e04636ac7523a7a27017ce1f7e70811fb5208d668b3b652d5"
 	expectedSig    = "a9304dd7d9c48031910e8072a217eff7df789e22eb39380deb3007c7d32172895a0a1313f653e7d33996ededa0fcd3a97193c6fe849a16e99635bd66850891be"
+
+	testKeyringPassword = "test-password-1234"
+	testKeyName         = "test-bridge-key"
 )
 
 func TestFileSigner_SignAndRecover(t *testing.T) {
-	keyPath := writeKeyFile(t, testPrivKeyHex)
 	expectedSigBytes, err := hex.DecodeString(expectedSig)
 	requireNoError(t, err, "failed to decode expected signature")
 
-	signer, err := NewFileSigner(keyPath, "")
+	keyringDir, pwFile := writeKeyringWithKey(t, testPrivKeyHex, testKeyName)
+
+	signer, err := NewFileSigner(keyringDir, testKeyName, pwFile)
 	requireNoError(t, err, "NewFileSigner failed")
 
 	msg := []byte("TellorLayer: Initial bridge signature A for operator tellorvaloper1test")
@@ -71,19 +76,29 @@ func TestFileSigner_SignAndRecover(t *testing.T) {
 	expectedPubKeyBytes, err := hex.DecodeString(pubKeyHex)
 	requireNoError(t, err, "failed to decode expected public key")
 	requireEqual(t, filePubKey, expectedPubKeyBytes, "public key mismatch")
-
 }
 
-// writeKeyFile writes a hex string to a temp file with 0600 permissions.
-func writeKeyFile(t *testing.T, content string) string {
+func writeKeyringWithKey(t *testing.T, keyHex, keyName string) (string, string) {
 	t.Helper()
 
 	dir := t.TempDir()
-	path := filepath.Join(dir, "test.key")
-
-	if err := os.WriteFile(path, []byte(content+"\n"), 0600); err != nil {
-		t.Fatalf("failed to write key file: %v", err)
+	pwFile := filepath.Join(t.TempDir(), "pw")
+	if err := os.WriteFile(pwFile, []byte(testKeyringPassword+"\n"), 0600); err != nil {
+		t.Fatalf("write password file: %v", err)
 	}
 
-	return path
+	// Repeat the password enough times to satisfy whatever read pattern
+	// the keyring uses during init (it can prompt to set + confirm).
+	passReader := strings.NewReader(strings.Repeat(testKeyringPassword+"\n", 4))
+	cdc := MakeKeyringCodec()
+	kr, err := keyring.New(sdk.KeyringServiceName(), keyring.BackendFile, dir, passReader, cdc)
+	if err != nil {
+		t.Fatalf("open keyring: %v", err)
+	}
+
+	if err := kr.ImportPrivKeyHex(keyName, keyHex, "secp256k1"); err != nil {
+		t.Fatalf("import priv key: %v", err)
+	}
+
+	return dir, pwFile
 }

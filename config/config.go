@@ -31,9 +31,10 @@ type SignerConfig struct {
 	// Backend selects the signing backend: "file" or "fortanixdsm".
 	Backend Backend `yaml:"backend"`
 
-	// KeyPath is the path to the hex-encoded secp256k1 private key file.
-	// Required when Backend == "file".
-	KeyPath string `yaml:"key_path"`
+	// --- File backend ---
+	KeyringDir   string `yaml:"keyring_dir"`
+	KeyName      string `yaml:"key_name"`
+	PasswordFile string `yaml:"password_file"`
 
 	// --- FortanixDSM backend ---
 	DSMAPIEndpoint string `yaml:"dsm_api_endpoint"`
@@ -44,7 +45,9 @@ type SignerConfig struct {
 
 func (c *SignerConfig) ToMap() map[string]any {
 	return map[string]any{
-		"key_path":         c.KeyPath,
+		"keyring_dir":      c.KeyringDir,
+		"key_name":         c.KeyName,
+		"password_file":    c.PasswordFile,
 		"dsm_api_endpoint": c.DSMAPIEndpoint,
 		"dsm_api_key":      c.DSMAPIKey,
 		"dsm_key_id":       c.DSMKeyID,
@@ -145,11 +148,14 @@ func (c *Config) validate() error {
 	// Signer
 	switch c.Signer.Backend {
 	case BackendFile:
-		if c.Signer.KeyPath == "" {
-			return errors.New("signer.key_path is required when backend is \"file\"")
+		if c.Signer.KeyringDir == "" {
+			return errors.New("signer.keyring_dir is required when backend is \"file\"")
 		}
-		if _, err := os.Stat(c.Signer.KeyPath); err != nil {
-			return fmt.Errorf("signer.key_path %q: %w", c.Signer.KeyPath, err)
+		if _, err := os.Stat(c.Signer.KeyringDir); err != nil {
+			return fmt.Errorf("signer.keyring_dir %q: %w", c.Signer.KeyringDir, err)
+		}
+		if c.Signer.KeyName == "" {
+			return errors.New("signer.key_name is required when backend is \"file\"")
 		}
 	case BackendFortanixDSM:
 		if c.Signer.DSMAPIEndpoint == "" {

@@ -3,12 +3,15 @@
 # Never commit config.yaml.
 
 signer:
-  # backend selects the signing backend: "file", or "fortanixdsm".
+  # backend selects the signing backend: "file" or "fortanixdsm".
   backend: file
 
   # --- file backend ---
-  # key_path: path to hex-encoded secp256k1 private key
-  key_path: /etc/bridge-signer/bridge.key
+  keyring_dir: /etc/bridge-signer/keyring
+  key_name: my-bridge-key
+
+  # password_file, optional file containing the keyring password.
+  # password_file: /etc/bridge-signer/pw
 
   # --- fortanixdsm backend ---
   # dsm_api_endpoint: https://amer.smartkey.io
