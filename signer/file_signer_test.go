@@ -33,7 +33,7 @@ func TestFileSigner_SignAndRecover(t *testing.T) {
 
 	keyringDir, pwFile := writeKeyringWithKey(t, testPrivKeyHex, testKeyName)
 
-	signer, err := NewFileSigner(keyringDir, testKeyName, pwFile)
+	signer, err := NewFileSigner(keyringDir, testKeyName, pwFile, "")
 	requireNoError(t, err, "NewFileSigner failed")
 
 	msg := []byte("TellorLayer: Initial bridge signature A for operator tellorvaloper1test")
