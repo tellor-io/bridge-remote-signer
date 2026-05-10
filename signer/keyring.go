@@ -2,10 +2,10 @@ package signer
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"fmt"
 	"io"
-	"net/http"
 	"os"
 	"strings"
 
@@ -16,12 +16,11 @@ import (
 	cosmossecp "github.com/cosmos/cosmos-sdk/crypto/keys/secp256k1"
 	cryptotypes "github.com/cosmos/cosmos-sdk/crypto/types"
 	sdk "github.com/cosmos/cosmos-sdk/types"
+	"github.com/cryptoriums/layer-packages/webunlock"
 	"golang.org/x/term"
 )
 
 const secp256k1KeyLen = 32
-
-const unlockPage = `<!doctype html><html><head><meta charset="utf-8"><title>Unlock</title></head><body><form method="POST"><label>Password: <input name="pass" type="password" required></label><button type="submit">Unlock</button></form>{{MSG}}</body></html>`
 
 // MakeKeyringCodec builds a codec that registers the standard cosmos-sdk
 // crypto interfaces. The keyring needs this to unmarshal the Any wrapped
@@ -31,6 +30,14 @@ func MakeKeyringCodec() codec.Codec {
 	cryptocodec.RegisterInterfaces(registry)
 	return codec.NewProtoCodec(registry)
 }
+
+// nopLogger satisfies webunlock.Logger by discarding all output. Keyring unlock
+// messages are handled by the caller; we don't need a full logger here.
+type nopLogger struct{}
+
+func (nopLogger) Info(msg string, _ ...any)  {}
+func (nopLogger) Warn(msg string, _ ...any)  {}
+func (nopLogger) Error(msg string, _ ...any) {}
 
 func BuildPasswordReader(passwordFile, webPort, keyringDir, keyName string) (io.Reader, error) {
 	if strings.EqualFold(os.Getenv("KEYRING_UNLOCK_MODE"), "web") {
@@ -55,38 +62,15 @@ func webUnlock(port, keyringDir, keyName string) (string, error) {
 		port = "8888"
 	}
 	cdc := MakeKeyringCodec()
-	passCh := make(chan string, 1)
-
-	mux := http.NewServeMux()
-	mux.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		if r.Method == http.MethodGet {
-			writePage(w, http.StatusOK, "")
-		}
-		if err := r.ParseForm(); err != nil {
-			http.Error(w, "bad request", http.StatusBadRequest)
-			return
-		}
-		pass := strings.TrimSpace(r.FormValue("pass"))
-		if pass == "" {
-			writePage(w, http.StatusBadRequest, "Password is required")
-			return
-		}
-		if err := validateKeyringPass(pass, keyringDir, keyName, cdc); err != nil {
-			writePage(w, http.StatusUnauthorized, "Incorrect password")
-			return
-		}
-		_, _ = w.Write([]byte("unlocked"))
-		if f, ok := w.(http.Flusher); ok {
-			f.Flush()
-		}
-		select {
-		case passCh <- pass:
-		default:
-		}
-	})
-	server := &http.Server{Addr: ":" + port, Handler: mux}
-	go server.ListenAndServe()
-	return <-passCh, nil
+	addr := ":" + port
+	return webunlock.WaitForUnlock(
+		context.Background(),
+		addr,
+		func(pass string) error {
+			return validateKeyringPass(pass, keyringDir, keyName, cdc)
+		},
+		nopLogger{},
+	)
 }
 
 func validateKeyringPass(pass, keyringDir, keyName string, cdc codec.Codec) error {
@@ -96,16 +80,6 @@ func validateKeyringPass(pass, keyringDir, keyName string, cdc codec.Codec) erro
 	}
 	_, _, err = kr.Sign(keyName, []byte("unlock validation"), 1)
 	return err
-}
-
-func writePage(w http.ResponseWriter, status int, msg string) {
-	w.Header().Set("Content-Type", "text/html;  charset=utf8")
-	w.WriteHeader(status)
-	replace := ""
-	if msg != "" {
-		replace = "<p style=\"color:red;\">" + msg + "</p>"
-	}
-	_, _ = io.WriteString(w, strings.Replace(unlockPage, "{{MSG}}", replace, 1))
 }
 
 func buildFilePasswordReader(path string) (io.Reader, error) {

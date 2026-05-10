@@ -9,8 +9,8 @@ import (
 	"github.com/cometbft/cometbft/crypto"
 	"github.com/cometbft/cometbft/libs/log"
 	"github.com/cometbft/cometbft/libs/protoio"
-	privvalproto "github.com/cometbft/cometbft/proto/tendermint/privval"
 	"github.com/cometbft/cometbft/privval"
+	privvalproto "github.com/cometbft/cometbft/proto/tendermint/privval"
 	"github.com/cometbft/cometbft/types"
 )
 
@@ -30,9 +30,21 @@ func RunDialClient(
 	handler privval.ValidationRequestHandlerFunc,
 	logger log.Logger,
 ) {
-	log := logger.With("remote", targetAddr)
-	backoff := time.Second
 	dialer := privval.DialTCPFn(targetAddr, 8*time.Second, connPrivKey)
+	runDialClient(ctx, dialer, chainID, pv, handler, logger.With("remote", targetAddr))
+}
+
+// runDialClient is the internal implementation that accepts an injectable dial
+// function. Used directly in tests.
+func runDialClient(
+	ctx context.Context,
+	dialFn func() (net.Conn, error),
+	chainID string,
+	pv types.PrivValidator,
+	handler privval.ValidationRequestHandlerFunc,
+	logger log.Logger,
+) {
+	backoff := time.Second
 
 	for {
 		select {
@@ -41,9 +53,9 @@ func RunDialClient(
 		default:
 		}
 
-		conn, err := dialer()
+		conn, err := dialFn()
 		if err != nil {
-			log.Error("privval dial failed", "err", err)
+			logger.Error("privval dial failed", "err", err)
 			select {
 			case <-ctx.Done():
 				return
@@ -52,10 +64,10 @@ func RunDialClient(
 			continue
 		}
 
-		log.Info("privval connected")
-		serveConn(ctx, conn, chainID, pv, handler, log)
+		logger.Info("privval connected")
+		serveConn(ctx, conn, chainID, pv, handler, logger)
 		_ = conn.Close()
-		log.Info("privval connection closed, reconnecting")
+		logger.Info("privval connection closed, reconnecting")
 
 		select {
 		case <-ctx.Done():
@@ -65,6 +77,8 @@ func RunDialClient(
 	}
 }
 
+// serveConn handles one privval connection until disconnect or ctx cancellation.
+// A goroutine closes conn when ctx is done so rd.ReadMsg() unblocks promptly.
 func serveConn(
 	ctx context.Context,
 	conn net.Conn,
@@ -73,22 +87,20 @@ func serveConn(
 	handler privval.ValidationRequestHandlerFunc,
 	logger log.Logger,
 ) {
+	// Close conn on context cancellation to unblock any blocking read.
+	stop := context.AfterFunc(ctx, func() { _ = conn.Close() })
+	defer stop()
+
 	rd := protoio.NewDelimitedReader(conn, MaxRemoteSignerMsgSize)
 	wr := protoio.NewDelimitedWriter(conn)
 	deadline := 8 * time.Second
 
 	for {
-		select {
-		case <-ctx.Done():
-			return
-		default:
-		}
-
 		_ = conn.SetReadDeadline(time.Now().Add(deadline))
 		var req privvalproto.Message
 		_, err := rd.ReadMsg(&req)
 		if err != nil {
-			if err != io.EOF {
+			if err != io.EOF && ctx.Err() == nil {
 				logger.Error("privval read", "err", err)
 			}
 			return
