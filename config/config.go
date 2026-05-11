@@ -94,6 +94,9 @@ type ServerConfig struct {
 
 // TLSConfig holds paths to the mTLS certificate material.
 type TLSConfig struct {
+	// Insecure disables TLS entirely. Safe to use inside a private Docker network.
+	Insecure bool `yaml:"insecure"`
+
 	// CACert is the path to the CA certificate used to verify client certs.
 	CACert string `yaml:"ca_cert"`
 
@@ -211,18 +214,20 @@ func (c *Config) validate() error {
 		return errors.New("server.request_timeout must be positive")
 	}
 
-	if c.TLS.CACert == "" {
-		return errors.New("tls.ca_cert is required")
-	}
-	if c.TLS.ServerCert == "" {
-		return errors.New("tls.server_cert is required")
-	}
-	if c.TLS.ServerKey == "" {
-		return errors.New("tls.server_key is required")
-	}
-	for _, path := range []string{c.TLS.CACert, c.TLS.ServerCert, c.TLS.ServerKey} {
-		if _, err := os.Stat(path); err != nil {
-			return fmt.Errorf("tls file %q: %w", path, err)
+	if !c.TLS.Insecure {
+		if c.TLS.CACert == "" {
+			return errors.New("tls.ca_cert is required (or set tls.insecure: true)")
+		}
+		if c.TLS.ServerCert == "" {
+			return errors.New("tls.server_cert is required (or set tls.insecure: true)")
+		}
+		if c.TLS.ServerKey == "" {
+			return errors.New("tls.server_key is required (or set tls.insecure: true)")
+		}
+		for _, path := range []string{c.TLS.CACert, c.TLS.ServerCert, c.TLS.ServerKey} {
+			if _, err := os.Stat(path); err != nil {
+				return fmt.Errorf("tls file %q: %w", path, err)
+			}
 		}
 	}
 
