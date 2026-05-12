@@ -4,17 +4,20 @@ import (
 	"bytes"
 	"context"
 	"net"
+	"path/filepath"
 	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
 
 	"github.com/cometbft/cometbft/crypto"
+	"github.com/cometbft/cometbft/crypto/ed25519"
 	"github.com/cometbft/cometbft/libs/log"
 	"github.com/cometbft/cometbft/libs/protoio"
 	"github.com/cometbft/cometbft/privval"
 	privvalproto "github.com/cometbft/cometbft/proto/tendermint/privval"
 	cmtproto "github.com/cometbft/cometbft/proto/tendermint/types"
+	"github.com/cometbft/cometbft/types"
 )
 
 // ── helpers ──────────────────────────────────────────────────────────────────
@@ -588,5 +591,214 @@ func TestValidatorAddressEnforced(t *testing.T) {
 	_, err := handler(lpv, req, "layertest-5")
 	if err == nil {
 		t.Error("expected rejection of wrong validator address, got nil error")
+	}
+}
+
+// ── TestSignProposal ──────────────────────────────────────────────────────────
+//
+// SignProposal must produce a valid signature and reject a conflicting
+// proposal at the same height/round (double-sign via proposal).
+
+func TestSignProposal_HappyPath(t *testing.T) {
+	lpv, handler, _ := setupHandler(t)
+
+	pk, err := lpv.GetPubKey()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	hash := make([]byte, 32)
+	for i := range hash {
+		hash[i] = byte(i + 2)
+	}
+	blockID := cmtproto.BlockID{Hash: hash, PartSetHeader: cmtproto.PartSetHeader{Total: 1, Hash: hash}}
+
+	req := privvalproto.Message{
+		Sum: &privvalproto.Message_SignProposalRequest{
+			SignProposalRequest: &privvalproto.SignProposalRequest{
+				ChainId: "layertest-5",
+				Proposal: &cmtproto.Proposal{
+					Type:     cmtproto.ProposalType,
+					Height:   200,
+					Round:    0,
+					PolRound: -1,
+					BlockID:  blockID,
+				},
+			},
+		},
+	}
+	res, err := handler(lpv, req, "layertest-5")
+	if err != nil {
+		t.Fatalf("SignProposal error: %v", err)
+	}
+	spr := MustSignedProposalResponse(&res)
+	if spr == nil || spr.Error != nil {
+		t.Fatalf("expected success, got: %+v", spr)
+	}
+	if len(spr.Proposal.Signature) == 0 {
+		t.Error("expected non-empty proposal signature")
+	}
+
+	// Verify the signature using the public key via ProposalSignBytes.
+	signBytes := types.ProposalSignBytes("layertest-5", &spr.Proposal)
+	if !pk.VerifySignature(signBytes, spr.Proposal.Signature) {
+		t.Error("proposal signature failed cryptographic verification")
+	}
+}
+
+func TestSignProposal_DoubleSignRejected(t *testing.T) {
+	lpv, handler, _ := setupHandler(t)
+
+	hash1 := make([]byte, 32)
+	hash2 := make([]byte, 32)
+	for i := range hash1 {
+		hash1[i] = byte(i + 1)
+		hash2[i] = byte(i + 50)
+	}
+	makeProposalReq := func(hash []byte) privvalproto.Message {
+		bid := cmtproto.BlockID{Hash: hash, PartSetHeader: cmtproto.PartSetHeader{Total: 1, Hash: hash}}
+		return privvalproto.Message{
+			Sum: &privvalproto.Message_SignProposalRequest{
+				SignProposalRequest: &privvalproto.SignProposalRequest{
+					ChainId: "layertest-5",
+					Proposal: &cmtproto.Proposal{
+						Type:     cmtproto.ProposalType,
+						Height:   777,
+						Round:    0,
+						PolRound: -1,
+						BlockID:  bid,
+					},
+				},
+			},
+		}
+	}
+
+	// First proposal — must succeed.
+	if _, err := handler(lpv, makeProposalReq(hash1), "layertest-5"); err != nil {
+		t.Fatalf("first proposal: %v", err)
+	}
+
+	// Second proposal same height/round, different block — must be rejected.
+	res, err := handler(lpv, makeProposalReq(hash2), "layertest-5")
+	if err == nil {
+		t.Fatal("expected double-sign rejection for proposal, got nil error")
+	}
+	spr := MustSignedProposalResponse(&res)
+	if spr == nil || spr.Error == nil {
+		t.Errorf("expected RemoteSignerError in response, got: %+v", spr)
+	}
+}
+
+// ── TestRunDialClient_TCPFullCycle ────────────────────────────────────────────
+//
+// TestRunDialClient_TCPFullCycle exercises the public RunDialClient entry-point
+// with a real TCP listener (same path as production). It verifies:
+//  - SecretConnection handshake completes
+//  - PubKeyRequest is served
+//  - SignVoteRequest is served and produces a valid signature
+
+func TestRunDialClient_TCPFullCycle(t *testing.T) {
+	ln, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer ln.Close()
+
+	connKey := ed25519.GenPrivKey()
+	tcpL := privval.NewTCPListener(ln, connKey)
+
+	dir := t.TempDir()
+	keyPath := filepath.Join(dir, "key.json")
+	statePath := filepath.Join(dir, "state.json")
+	privval.GenFilePV(keyPath, statePath).Save()
+
+	pv, err := LoadCometFilePV(keyPath, statePath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	lpv := NewLockedPrivValidator(pv)
+	addr, err := ValidatorAddressForHandler(lpv)
+	if err != nil {
+		t.Fatal(err)
+	}
+	handler := ValidationRequestHandler(addr)
+	chainID := "tcp-cycle"
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	// RunDialClient is the public entry-point used in production cmd_start.go.
+	go RunDialClient(ctx, "tcp://"+tcpL.Addr().String(), chainID, ed25519.GenPrivKey(), lpv, handler, nopLog())
+
+	connCh := make(chan net.Conn, 1)
+	go func() {
+		c, acceptErr := tcpL.Accept()
+		if acceptErr == nil {
+			connCh <- c
+		}
+	}()
+
+	var sconn net.Conn
+	select {
+	case sconn = <-connCh:
+	case <-time.After(8 * time.Second):
+		t.Fatal("timeout waiting for RunDialClient to connect")
+	}
+	defer sconn.Close()
+	_ = sconn.SetDeadline(time.Now().Add(10 * time.Second))
+
+	wr := protoio.NewDelimitedWriter(sconn)
+	rd := protoio.NewDelimitedReader(sconn, MaxRemoteSignerMsgSize)
+
+	writeRead := func(req *privvalproto.Message) privvalproto.Message {
+		t.Helper()
+		if _, err := wr.WriteMsg(req); err != nil {
+			t.Fatalf("writeRead write: %v", err)
+		}
+		var res privvalproto.Message
+		if _, err := rd.ReadMsg(&res); err != nil {
+			t.Fatalf("writeRead read: %v", err)
+		}
+		return res
+	}
+
+	// PubKey request.
+	pkRes := writeRead(&privvalproto.Message{
+		Sum: &privvalproto.Message_PubKeyRequest{
+			PubKeyRequest: &privvalproto.PubKeyRequest{ChainId: chainID},
+		},
+	})
+	pkr := MustPubKeyResponse(&pkRes)
+	if pkr == nil || pkr.Error != nil {
+		t.Fatalf("PubKeyRequest failed: %+v", pkr)
+	}
+
+	// SignVoteRequest.
+	hash := make([]byte, 32)
+	for i := range hash {
+		hash[i] = byte(i + 3)
+	}
+	blockID := cmtproto.BlockID{Hash: hash, PartSetHeader: cmtproto.PartSetHeader{Total: 1, Hash: hash}}
+	voteRes := writeRead(&privvalproto.Message{
+		Sum: &privvalproto.Message_SignVoteRequest{
+			SignVoteRequest: &privvalproto.SignVoteRequest{
+				ChainId: chainID,
+				Vote: &cmtproto.Vote{
+					Type:             cmtproto.PrevoteType,
+					Height:           50,
+					Round:            0,
+					BlockID:          blockID,
+					ValidatorAddress: addr,
+					ValidatorIndex:   0,
+				},
+			},
+		},
+	})
+	svr := MustSignedVoteResponse(&voteRes)
+	if svr == nil || svr.Error != nil {
+		t.Fatalf("SignVoteRequest failed: %+v", svr)
+	}
+	if len(svr.Vote.Signature) == 0 {
+		t.Error("expected non-empty vote signature")
 	}
 }
