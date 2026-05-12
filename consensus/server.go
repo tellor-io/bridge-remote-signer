@@ -108,7 +108,7 @@ func serveConn(
 
 		res, handleErr := handler(pv, req, chainID)
 		if handleErr != nil {
-			logger.Debug("privval handler", "err", handleErr)
+			logger.Error("privval handler", "err", handleErr)
 		}
 
 		_ = conn.SetWriteDeadline(time.Now().Add(deadline))
