@@ -44,7 +44,11 @@ func runDialClient(
 	handler privval.ValidationRequestHandlerFunc,
 	logger log.Logger,
 ) {
-	backoff := time.Second
+	const (
+		minBackoff = time.Second
+		maxBackoff = 30 * time.Second
+	)
+	backoff := minBackoff
 
 	for {
 		select {
@@ -61,10 +65,16 @@ func runDialClient(
 				return
 			case <-time.After(backoff):
 			}
+			// Exponential backoff: 1s → 2s → 4s … capped at 30s
+			backoff *= 2
+			if backoff > maxBackoff {
+				backoff = maxBackoff
+			}
 			continue
 		}
 
 		logger.Info("privval connected")
+		backoff = minBackoff // reset on successful connection
 		serveConn(ctx, conn, chainID, pv, handler, logger)
 		_ = conn.Close()
 		logger.Info("privval connection closed, reconnecting")
@@ -93,7 +103,7 @@ func serveConn(
 
 	rd := protoio.NewDelimitedReader(conn, MaxRemoteSignerMsgSize)
 	wr := protoio.NewDelimitedWriter(conn)
-	deadline := 8 * time.Second
+	deadline := 30 * time.Second
 
 	for {
 		_ = conn.SetReadDeadline(time.Now().Add(deadline))

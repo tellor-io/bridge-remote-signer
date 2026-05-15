@@ -109,6 +109,7 @@ func runDaemon(configPath string) error {
 	ctx, ctxCancel := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer ctxCancel()
 
+	var consensusWg sync.WaitGroup
 	if cfg.Consensus.Enabled() {
 		cometLogger := log.NewTMLogger(log.NewSyncWriter(os.Stdout))
 
@@ -132,7 +133,11 @@ func runDaemon(configPath string) error {
 			if target == "" {
 				continue
 			}
-			go consensus.RunDialClient(ctx, target, cfg.Consensus.ChainID, connKey, locked, handler, cometLogger)
+			consensusWg.Add(1)
+			go func(t string) {
+				defer consensusWg.Done()
+				consensus.RunDialClient(ctx, t, cfg.Consensus.ChainID, connKey, locked, handler, cometLogger)
+			}(target)
 		}
 		logger.Info("consensus signer started",
 			"chain_id", cfg.Consensus.ChainID,
@@ -195,6 +200,7 @@ func runDaemon(configPath string) error {
 	}
 
 	ctxCancel() // stop consensus dial goroutines
+	consensusWg.Wait() // wait for all consensus goroutines to exit before shutting down gRPC
 
 	shutdownCtx, cancel := context.WithTimeout(context.Background(), shutdownTimeout)
 	defer cancel()
