@@ -2,12 +2,10 @@ package signer
 
 import (
 	"bytes"
-	"context"
 	"errors"
 	"fmt"
 	"io"
 	"os"
-	"strings"
 
 	"github.com/cosmos/cosmos-sdk/codec"
 	codectypes "github.com/cosmos/cosmos-sdk/codec/types"
@@ -15,9 +13,6 @@ import (
 	"github.com/cosmos/cosmos-sdk/crypto/keyring"
 	cosmossecp "github.com/cosmos/cosmos-sdk/crypto/keys/secp256k1"
 	cryptotypes "github.com/cosmos/cosmos-sdk/crypto/types"
-	sdk "github.com/cosmos/cosmos-sdk/types"
-	"github.com/cryptoriums/layer-packages/webunlock"
-	"github.com/tellor-io/bridge-remote-signer/logging"
 	"golang.org/x/term"
 )
 
@@ -32,51 +27,14 @@ func MakeKeyringCodec() codec.Codec {
 	return codec.NewProtoCodec(registry)
 }
 
-func BuildPasswordReader(passwordFile, webPort, keyringDir, keyName string) (io.Reader, error) {
-	if strings.EqualFold(os.Getenv("KEYRING_UNLOCK_MODE"), "web") {
-		pass, err := webUnlock(webPort, keyringDir, keyName)
-		if err != nil {
-			return nil, err
-		}
-		return strings.NewReader(pass + "\n"), nil
-	}
-
+func BuildPasswordReader(passwordFile string) (io.Reader, error) {
 	if passwordFile != "" {
 		return buildFilePasswordReader(passwordFile)
 	}
 	if !term.IsTerminal(int(os.Stdin.Fd())) {
-		return nil, errors.New("stdin is not a terminal; set the password file option or KEYRING_UNLOCK_MODE=web")
+		return nil, errors.New("stdin is not a terminal; set the password file option")
 	}
 	return os.Stdin, nil
-}
-
-func webUnlock(port, keyringDir, keyName string) (string, error) {
-	if port == "" {
-		port = "8888"
-	}
-	cdc := MakeKeyringCodec()
-	addr := ":" + port
-	log, err := logging.New("error", "json")
-	if err != nil {
-		return "", fmt.Errorf("create webunlock logger: %w", err)
-	}
-	return webunlock.WaitForUnlock(
-		context.Background(),
-		addr,
-		func(pass string) error {
-			return validateKeyringPass(pass, keyringDir, keyName, cdc)
-		},
-		log,
-	)
-}
-
-func validateKeyringPass(pass, keyringDir, keyName string, cdc codec.Codec) error {
-	kr, err := keyring.New(sdk.KeyringServiceName(), keyring.BackendFile, keyringDir, strings.NewReader(pass+"\n"), cdc)
-	if err != nil {
-		return err
-	}
-	_, _, err = kr.Sign(keyName, []byte("unlock validation"), 1)
-	return err
 }
 
 func buildFilePasswordReader(path string) (io.Reader, error) {

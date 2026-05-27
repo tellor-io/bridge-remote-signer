@@ -29,9 +29,7 @@ func newFileSignerFromConfig(_ context.Context, raw map[string]any) (Signer, err
 	}
 	pwFile, _ := raw["password_file"].(string)
 
-	webPort, _ := raw["web_unlock_port"].(string)
-
-	return NewFileSigner(keyringDir, keyName, pwFile, webPort)
+	return NewFileSigner(keyringDir, keyName, pwFile)
 }
 
 // FileSigner implements Signer using a secp256k1 private key extracted
@@ -42,7 +40,7 @@ type FileSigner struct {
 	mu               sync.Mutex // protects against concurrent Sign calls
 }
 
-func NewFileSigner(keyringDir, keyName, pwFile, webPort string) (*FileSigner, error) {
+func NewFileSigner(keyringDir, keyName, pwFile string) (*FileSigner, error) {
 	if keyringDir == "" {
 		return nil, errors.New("keyring_dir is required for file signer backend")
 	}
@@ -50,7 +48,7 @@ func NewFileSigner(keyringDir, keyName, pwFile, webPort string) (*FileSigner, er
 		return nil, errors.New("key_name is required for file signer backend")
 	}
 
-	passReader, err := BuildPasswordReader(pwFile, webPort, keyringDir, keyName)
+	passReader, err := BuildPasswordReader(pwFile)
 	if err != nil {
 		return nil, err
 	}
