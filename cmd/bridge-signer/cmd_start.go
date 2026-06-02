@@ -200,6 +200,7 @@ func runDaemon(configPath string) error {
 	}
 
 	ctxCancel()        // stop consensus dial goroutines
+
 	consensusWg.Wait() // wait for all consensus goroutines to exit before shutting down gRPC
 
 	shutdownCtx, cancel := context.WithTimeout(context.Background(), shutdownTimeout)

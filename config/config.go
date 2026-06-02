@@ -47,9 +47,9 @@ type SignerConfig struct {
 	Backend Backend `yaml:"backend"`
 
 	// --- File backend ---
-	KeyringDir   string `yaml:"keyring_dir"`
-	KeyName      string `yaml:"key_name"`
-	PasswordFile string `yaml:"password_file"`
+	KeyringDir    string `yaml:"keyring_dir"`
+	KeyName       string `yaml:"key_name"`
+	PasswordFile  string `yaml:"password_file"`
 
 	// --- FortanixDSM backend ---
 	DSMAPIEndpoint string `yaml:"dsm_api_endpoint"`

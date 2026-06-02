@@ -65,6 +65,7 @@ func runDialClient(
 				return
 			case <-time.After(backoff):
 			}
+
 			// Exponential backoff: 1s → 2s → 4s … capped at 5s
 			backoff *= 2
 			if backoff > maxBackoff {
