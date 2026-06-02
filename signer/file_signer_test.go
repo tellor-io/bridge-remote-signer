@@ -1,6 +1,7 @@
 package signer
 
 import (
+	"bytes"
 	"context"
 	"crypto/ecdsa"
 	"crypto/sha256"
@@ -76,6 +77,59 @@ func TestFileSigner_SignAndRecover(t *testing.T) {
 	expectedPubKeyBytes, err := hex.DecodeString(pubKeyHex)
 	requireNoError(t, err, "failed to decode expected public key")
 	requireEqual(t, filePubKey, expectedPubKeyBytes, "public key mismatch")
+}
+
+func TestFileSigner_SignRaw(t *testing.T) {
+	keyringDir, pwFile := writeKeyringWithKey(t, testPrivKeyHex, testKeyName)
+
+	signer, err := NewFileSigner(keyringDir, testKeyName, pwFile, "")
+	requireNoError(t, err, "NewFileSigner failed")
+
+	// Use a fixed 32-byte hash.
+	hash := sha256.Sum256([]byte("test raw signing payload"))
+
+	sig, err := signer.SignRaw(context.Background(), hash[:])
+	requireNoError(t, err, "SignRaw failed")
+
+	// Must be exactly 64 bytes (r || s), no v byte.
+	requireLen(t, sig, 64)
+
+	// Recover from the 64-byte signature and verify it matches the expected pubkey.
+	// We need to try both possible v values (0 and 1) since SignRaw strips v.
+	expectedPubKeyBytes, err := hex.DecodeString(pubKeyHex)
+	requireNoError(t, err, "decode expected public key")
+
+	recovered := false
+	for _, v := range []byte{0, 1} {
+		candidate := append(sig, v)
+		pubKeyBytes, recErr := crypto.Ecrecover(hash[:], candidate)
+		if recErr != nil {
+			continue
+		}
+		x := new(big.Int).SetBytes(pubKeyBytes[1:33])
+		y := new(big.Int).SetBytes(pubKeyBytes[33:65])
+		recoveredKey := ecdsa.PublicKey{Curve: secp256k1.S256(), X: x, Y: y}
+		compressed := crypto.CompressPubkey(&recoveredKey)
+		if bytes.Equal(compressed, expectedPubKeyBytes) {
+			recovered = true
+			break
+		}
+	}
+	if !recovered {
+		t.Error("SignRaw: could not recover expected public key from signature")
+	}
+}
+
+func TestFileSigner_SignRaw_WrongLength(t *testing.T) {
+	keyringDir, pwFile := writeKeyringWithKey(t, testPrivKeyHex, testKeyName)
+
+	signer, err := NewFileSigner(keyringDir, testKeyName, pwFile, "")
+	requireNoError(t, err, "NewFileSigner failed")
+
+	_, err = signer.SignRaw(context.Background(), []byte("too short"))
+	if err == nil {
+		t.Error("expected error for wrong-length input, got nil")
+	}
 }
 
 func writeKeyringWithKey(t *testing.T, keyHex, keyName string) (string, string) {

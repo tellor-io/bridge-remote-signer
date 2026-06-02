@@ -115,3 +115,25 @@ func (s *FileSigner) GetPublicKey(_ context.Context) ([]byte, error) {
 	copy(out, s.compressedPubKey)
 	return out, nil
 }
+
+// SignRaw implements Signer.
+// Signs the given 32-byte hash directly without any additional hashing.
+// Returns a 64-byte secp256k1 ECDSA signature (r || s), without the v byte.
+// Used for Cosmos SDK tx signing where the message digest is already computed.
+func (s *FileSigner) SignRaw(_ context.Context, msg []byte) ([]byte, error) {
+	if len(msg) != 32 {
+		return nil, fmt.Errorf("SignRaw: msg must be exactly 32 bytes, got %d", len(msg))
+	}
+
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	sig, err := crypto.Sign(msg, s.privateKey)
+	if err != nil {
+		return nil, fmt.Errorf("SignRaw: secp256k1 signing failed: %w", err)
+	}
+
+	// Return only the 64-byte r || s. Strip the v byte at sig[64] since Cosmos SDK
+	// expects a compact 64-byte signature.
+	return sig[:64], nil
+}

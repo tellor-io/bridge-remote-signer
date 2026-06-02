@@ -47,10 +47,9 @@ type SignerConfig struct {
 	Backend Backend `yaml:"backend"`
 
 	// --- File backend ---
-	KeyringDir    string `yaml:"keyring_dir"`
-	KeyName       string `yaml:"key_name"`
-	PasswordFile  string `yaml:"password_file"`
-	WebUnlockPort string `yaml:"web_unlock_port"`
+	KeyringDir   string `yaml:"keyring_dir"`
+	KeyName      string `yaml:"key_name"`
+	PasswordFile string `yaml:"password_file"`
 
 	// --- FortanixDSM backend ---
 	DSMAPIEndpoint string `yaml:"dsm_api_endpoint"`
@@ -64,7 +63,6 @@ func (c *SignerConfig) ToMap() map[string]any {
 		"keyring_dir":      c.KeyringDir,
 		"key_name":         c.KeyName,
 		"password_file":    c.PasswordFile,
-		"web_unlock_port":  c.WebUnlockPort,
 		"dsm_api_endpoint": c.DSMAPIEndpoint,
 		"dsm_api_key":      c.DSMAPIKey,
 		"dsm_key_id":       c.DSMKeyID,
