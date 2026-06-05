@@ -167,6 +167,7 @@ func runDaemon(configPath string) error {
 		RequestTimeout: cfg.Server.RequestTimeout,
 		MaxRecvMsgSize: cfg.Server.MaxRecvMsgSize,
 		Credentials:    creds,
+		ChainID:        cfg.Consensus.ChainID,
 	})
 	healthChecker := health.New(s, logger, cfg.Server.HealthAddr)
 

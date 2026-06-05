@@ -30,6 +30,7 @@ type Server struct {
 	requestTimeout time.Duration
 	listenAddr     string
 	grpcServer     *grpc.Server
+	chainID        string
 }
 
 // Config holds the server configuration.
@@ -38,6 +39,7 @@ type Config struct {
 	RequestTimeout time.Duration
 	MaxRecvMsgSize int
 	Credentials    credentials.TransportCredentials
+	ChainID        string
 }
 
 // New creates a Server with the given signer backend and config.
@@ -58,6 +60,7 @@ func New(s signer.Signer, logger *logging.Logger, cfg Config) *Server {
 		requestTimeout: cfg.RequestTimeout,
 		listenAddr:     cfg.ListenAddr,
 		grpcServer:     grpcServer,
+		chainID:        cfg.ChainID,
 	}
 
 	signerv1.RegisterBridgeSignerServer(grpcServer, srv)
@@ -181,6 +184,15 @@ func (s *Server) GetAddress(ctx context.Context, req *signerv1.GetAddressRequest
 	}
 
 	return &signerv1.GetAddressResponse{Address: bech32Addr}, nil
+}
+
+// GetChainID returns the cosmos chain ID the signer is configured for, so
+// callers (e.g. the monitor) can discover it at startup without a local env var.
+func (s *Server) GetChainID(_ context.Context, _ *signerv1.GetChainIDRequest) (*signerv1.GetChainIDResponse, error) {
+	if s.chainID == "" {
+		return nil, status.Errorf(codes.FailedPrecondition, "chain ID is not configured on the signer")
+	}
+	return &signerv1.GetChainIDResponse{ChainId: s.chainID}, nil
 }
 
 // enforces a per-request timeout
