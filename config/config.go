@@ -20,6 +20,10 @@ const (
 // Config is the top-level configuration for bridge-signer.
 // Loaded once at startup from a YAML file.
 type Config struct {
+	// ChainID is the cosmos chain ID. It is top-level (not under consensus)
+	// because it is also served over gRPC via GetChainID, which works even when
+	// consensus signing is disabled. Required only when consensus signing is on.
+	ChainID   string          `yaml:"chain_id"`
 	Consensus ConsensusConfig `yaml:"consensus"`
 	Signer    SignerConfig    `yaml:"signer"`
 	Server    ServerConfig    `yaml:"server"`
@@ -29,7 +33,6 @@ type Config struct {
 
 // ConsensusConfig controls the CometBFT privval TCP signer.
 type ConsensusConfig struct {
-	ChainID     string `yaml:"chain_id"`
 	KeyFile     string `yaml:"key_file"`
 	StateFile   string `yaml:"state_file"`
 	ConnKeyFile string `yaml:"conn_key_file"`
@@ -47,9 +50,9 @@ type SignerConfig struct {
 	Backend Backend `yaml:"backend"`
 
 	// --- File backend ---
-	KeyringDir    string `yaml:"keyring_dir"`
-	KeyName       string `yaml:"key_name"`
-	PasswordFile  string `yaml:"password_file"`
+	KeyringDir   string `yaml:"keyring_dir"`
+	KeyName      string `yaml:"key_name"`
+	PasswordFile string `yaml:"password_file"`
 
 	// --- FortanixDSM backend ---
 	DSMAPIEndpoint string `yaml:"dsm_api_endpoint"`
@@ -242,8 +245,8 @@ func (c *Config) validate() error {
 	}
 
 	if c.Consensus.Enabled() {
-		if c.Consensus.ChainID == "" {
-			return errors.New("consensus.chain_id is required when consensus.key_file is set")
+		if c.ChainID == "" {
+			return errors.New("chain_id is required when consensus.key_file is set")
 		}
 		if c.Consensus.StateFile == "" {
 			return errors.New("consensus.state_file is required")

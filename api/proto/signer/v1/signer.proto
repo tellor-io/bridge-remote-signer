@@ -17,6 +17,21 @@ service BridgeSigner {
   // GetPublicKey returns the compressed 33-byte secp256k1 public key.
   // Helps the node to derive the operator address.
   rpc GetPublicKey(GetPublicKeyRequest) returns (GetPublicKeyResponse);
+
+  // SignRaw signs the given 32-byte hash directly (no extra hashing).
+  // Returns a 64-byte secp256k1 signature (r || s), compatible with
+  // Cosmos SDK transaction signing. Used by the reporter to sign txs
+  // without a local keyring.
+  rpc SignRaw(SignRawRequest) returns (SignRawResponse);
+
+  // GetAddress derives the bech32 address from the signer's public key
+  // using the given prefix (e.g. "tellor"). Allows the reporter to
+  // discover its own address without hard-coding it in config.
+  rpc GetAddress(GetAddressRequest) returns (GetAddressResponse);
+
+  // GetChainID returns the cosmos chain ID the signer is configured for,
+  // so callers (e.g. the monitor) can discover it without a local env var.
+  rpc GetChainID(GetChainIDRequest) returns (GetChainIDResponse);
 }
 
 // SignRequest is the signing request sent by the validator.
@@ -44,4 +59,40 @@ message GetPublicKeyResponse {
   // The validator uses this to derive the bech32 operator address
   // and the Ethereum address for bridge contract verification.
   bytes public_key = 1;
+}
+// SignRawRequest is the request for raw cosmos-compatible signing.
+message SignRawRequest {
+  // msg is the 32-byte hash to sign directly (no additional hashing).
+  bytes msg = 1;
+
+  // request_id is an optional caller-assigned identifier for logs.
+  string request_id = 2;
+}
+
+// SignRawResponse contains the resulting cosmos-format signature.
+message SignRawResponse {
+  // signature is the 64-byte secp256k1 ECDSA signature (r || s).
+  // Compatible with Cosmos SDK tx signing (no v byte).
+  bytes signature = 1;
+}
+
+// GetAddressRequest specifies the bech32 prefix to use.
+message GetAddressRequest {
+  // prefix is the bech32 human-readable part (e.g. "tellor").
+  string prefix = 1;
+}
+
+// GetAddressResponse contains the derived bech32 address.
+message GetAddressResponse {
+  // address is the bech32-encoded account address (e.g. "tellor1...").
+  string address = 1;
+}
+
+// GetChainIDRequest is empty; the chain ID is fixed server-side config.
+message GetChainIDRequest {}
+
+// GetChainIDResponse contains the configured cosmos chain ID.
+message GetChainIDResponse {
+  // chain_id is the cosmos chain ID (e.g. "layertest-5").
+  string chain_id = 1;
 }

@@ -12,6 +12,11 @@ type Signer interface {
 	// Sign signs a 32-byte digest and returns a 65-byte Ethereum-format
 	Sign(ctx context.Context, msg []byte) ([]byte, error)
 
+	// SignRaw signs the given 32-byte hash directly without any additional hashing.
+	// Returns a 64-byte secp256k1 ECDSA signature (r || s), without the v byte.
+	// Used for Cosmos SDK tx signing where the digest is already computed by the SDK.
+	SignRaw(ctx context.Context, msg []byte) ([]byte, error)
+
 	// GetPublicKey returns the compressed 33-byte secp256k1 public key.
 	GetPublicKey(ctx context.Context) ([]byte, error)
 }

@@ -177,6 +177,38 @@ func (s *FortanixDSMSigner) GetPublicKey(_ context.Context) ([]byte, error) {
 	return out, nil
 }
 
+// SignRaw implements Signer.
+// Signs the given 32-byte hash directly without any additional hashing.
+// Returns a 64-byte secp256k1 ECDSA signature (r || s), without the v byte.
+// Used for Cosmos SDK tx signing where the message digest is already computed.
+func (s *FortanixDSMSigner) SignRaw(ctx context.Context, msg []byte) ([]byte, error) {
+	if len(msg) != 32 {
+		return nil, fmt.Errorf("SignRaw: msg must be exactly 32 bytes, got %d", len(msg))
+	}
+
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	hashSlice := msg[:]
+
+	resp, err := s.client.Sign(ctx, sdkms.SignRequest{
+		Hash:    &hashSlice,
+		HashAlg: sdkms.DigestAlgorithmSha256,
+		Key:     &s.keyDescriptor,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("SignRaw: FortanixDSM Sign call failed: %w", err)
+	}
+
+	sig, err := derToEthSig(resp.Signature, msg, s.compressedPubKey)
+	if err != nil {
+		return nil, fmt.Errorf("SignRaw: failed to convert DSM signature to Ethereum format: %w", err)
+	}
+
+	// Return only 64 bytes (r || s), strip the v byte
+	return sig[:64], nil
+}
+
 // parseSpkiToSecp256k1 extracts the compressed secp256k1 public key from a
 // DER-encoded SubjectPublicKeyInfo structure.
 func parseSpkiToSecp256k1(der []byte) ([]byte, error) {

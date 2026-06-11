@@ -46,7 +46,7 @@ func runDialClient(
 ) {
 	const (
 		minBackoff = time.Second
-		maxBackoff = 30 * time.Second
+		maxBackoff = 5 * time.Second
 	)
 	backoff := minBackoff
 
@@ -65,7 +65,8 @@ func runDialClient(
 				return
 			case <-time.After(backoff):
 			}
-			// Exponential backoff: 1s → 2s → 4s … capped at 30s
+
+			// Exponential backoff: 1s → 2s → 4s … capped at 5s
 			backoff *= 2
 			if backoff > maxBackoff {
 				backoff = maxBackoff
@@ -103,7 +104,7 @@ func serveConn(
 
 	rd := protoio.NewDelimitedReader(conn, MaxRemoteSignerMsgSize)
 	wr := protoio.NewDelimitedWriter(conn)
-	deadline := 30 * time.Second
+	deadline := 10 * time.Second
 
 	for {
 		_ = conn.SetReadDeadline(time.Now().Add(deadline))

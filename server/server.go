@@ -6,6 +6,8 @@ import (
 	"net"
 	"time"
 
+	cosmossecp "github.com/cosmos/cosmos-sdk/crypto/keys/secp256k1"
+	"github.com/cosmos/cosmos-sdk/types/bech32"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/credentials"
@@ -28,6 +30,7 @@ type Server struct {
 	requestTimeout time.Duration
 	listenAddr     string
 	grpcServer     *grpc.Server
+	chainID        string
 }
 
 // Config holds the server configuration.
@@ -36,6 +39,7 @@ type Config struct {
 	RequestTimeout time.Duration
 	MaxRecvMsgSize int
 	Credentials    credentials.TransportCredentials
+	ChainID        string
 }
 
 // New creates a Server with the given signer backend and config.
@@ -56,6 +60,7 @@ func New(s signer.Signer, logger *logging.Logger, cfg Config) *Server {
 		requestTimeout: cfg.RequestTimeout,
 		listenAddr:     cfg.ListenAddr,
 		grpcServer:     grpcServer,
+		chainID:        cfg.ChainID,
 	}
 
 	signerv1.RegisterBridgeSignerServer(grpcServer, srv)
@@ -77,6 +82,15 @@ func (s *Server) Start() error {
 		return fmt.Errorf("gRPC server exited with error: %w", err)
 	}
 
+	return nil
+}
+
+// ServeOn starts the gRPC server on the provided listener and blocks until
+// the server stops. Useful for testing with a pre-bound listener.
+func (s *Server) ServeOn(lis net.Listener) error {
+	if err := s.grpcServer.Serve(lis); err != nil {
+		return fmt.Errorf("gRPC server exited with error: %w", err)
+	}
 	return nil
 }
 
@@ -122,6 +136,67 @@ func (s *Server) GetPublicKey(ctx context.Context, _ *signerv1.GetPublicKeyReque
 	}
 
 	return &signerv1.GetPublicKeyResponse{PublicKey: pubKey}, nil
+}
+
+// SignRaw signs the given 32-byte hash directly without any additional hashing.
+// Returns a 64-byte secp256k1 signature (r || s) compatible with Cosmos SDK tx signing.
+// Used by the reporter to sign transactions without a local keyring.
+func (s *Server) SignRaw(ctx context.Context, req *signerv1.SignRawRequest) (*signerv1.SignRawResponse, error) {
+	start := time.Now()
+
+	if len(req.Msg) != 32 {
+		err := status.Errorf(codes.InvalidArgument,
+			"msg must be exactly 32 bytes, got %d", len(req.Msg))
+		s.logger.AuditSign(ctx, req.RequestId, req.Msg, err, time.Since(start))
+		return nil, err
+	}
+
+	sig, sigErr := s.signer.SignRaw(ctx, req.Msg)
+	s.logger.AuditSign(ctx, req.RequestId, req.Msg, sigErr, time.Since(start))
+	if sigErr != nil {
+		return nil, status.Errorf(codes.Internal, "signing failed: %v", sigErr)
+	}
+
+	return &signerv1.SignRawResponse{Signature: sig}, nil
+}
+
+// GetAddress derives the bech32 address from the signer's secp256k1 public key
+// using the given prefix (e.g. "tellor"). Allows the reporter to discover its
+// own address at startup without hard-coding it in config.
+func (s *Server) GetAddress(ctx context.Context, req *signerv1.GetAddressRequest) (*signerv1.GetAddressResponse, error) {
+	if req.Prefix == "" {
+		return nil, status.Errorf(codes.InvalidArgument, "prefix must not be empty")
+	}
+
+	pubKeyBytes, err := s.signer.GetPublicKey(ctx)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "failed to get public key: %v", err)
+	}
+
+	if len(pubKeyBytes) != 33 {
+		return nil, status.Errorf(codes.Internal, "invalid public key length %d, expected 33", len(pubKeyBytes))
+	}
+
+	// Use the Cosmos SDK secp256k1 PubKey type to derive the address via
+	// sha256 + ripemd160 of the compressed public key — the standard Cosmos derivation.
+	pubKey := &cosmossecp.PubKey{Key: pubKeyBytes}
+	addrBytes := pubKey.Address().Bytes()
+
+	bech32Addr, err := bech32.ConvertAndEncode(req.Prefix, addrBytes)
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "bech32 encode failed: %v", err)
+	}
+
+	return &signerv1.GetAddressResponse{Address: bech32Addr}, nil
+}
+
+// GetChainID returns the cosmos chain ID the signer is configured for, so
+// callers (e.g. the monitor) can discover it at startup without a local env var.
+func (s *Server) GetChainID(_ context.Context, _ *signerv1.GetChainIDRequest) (*signerv1.GetChainIDResponse, error) {
+	if s.chainID == "" {
+		return nil, status.Errorf(codes.FailedPrecondition, "chain ID is not configured on the signer")
+	}
+	return &signerv1.GetChainIDResponse{ChainId: s.chainID}, nil
 }
 
 // enforces a per-request timeout

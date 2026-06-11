@@ -6,6 +6,9 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
+
 	"github.com/tellor-io/bridge-remote-signer/logging"
 	"github.com/tellor-io/bridge-remote-signer/signer"
 )
@@ -18,6 +21,9 @@ import (
 //
 //	GET /healthz  — liveness:  is the process alive?
 //	GET /readyz   — readiness: is the signer backend ready to sign?
+//	GET /metrics  — Prometheus metrics. Currently exposes only `up` (set to 1
+//	                while the process is serving), so a scraper can detect when
+//	                the signer is down (no scrape / `up == 0`).
 type Checker struct {
 	signer     signer.Signer
 	logger     *logging.Logger
@@ -36,6 +42,7 @@ func New(s signer.Signer, logger *logging.Logger, listenAddr string) *Checker {
 	mux := http.NewServeMux()
 	mux.HandleFunc("/healthz", c.liveness)
 	mux.HandleFunc("/readyz", c.readiness)
+	mux.Handle("/metrics", metricsHandler())
 
 	c.httpServer = &http.Server{
 		Addr:         listenAddr,
@@ -46,6 +53,21 @@ func New(s signer.Signer, logger *logging.Logger, listenAddr string) *Checker {
 	}
 
 	return c
+}
+
+// metricsHandler serves Prometheus metrics. For now it exposes only the `up`
+// gauge (always 1 while the process is serving) on a dedicated registry — no
+// default Go/process collectors — so the output is exactly one metric. If the
+// signer is down the scrape fails and Prometheus records `up == 0` for the job.
+func metricsHandler() http.Handler {
+	reg := prometheus.NewRegistry()
+	up := prometheus.NewGauge(prometheus.GaugeOpts{
+		Name: "up",
+		Help: "Whether the bridge signer is up and serving (always 1 when scrapeable).",
+	})
+	up.Set(1)
+	reg.MustRegister(up)
+	return promhttp.HandlerFor(reg, promhttp.HandlerOpts{})
 }
 
 // Start begins serving health check requests.
