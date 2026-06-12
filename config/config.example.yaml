@@ -28,8 +28,33 @@ server:
   # max_recv_msg_size: max inbound message size in bytes
   max_recv_msg_size: 1048576  # 1MB
 
+  # allowed_msg_types: the allowlist of Cosmos message type_urls SignTx accepts.
+  # Empty => SignTx rejects everything. Authorization is by OPERATION: the signer
+  # is capable of ONLY four operations — attestations (SignOracleAttestation),
+  # block signing (consensus privval), reports + unjail (SignTx, scoped here).
+  # Scope this list to exactly the report/unjail messages the reporter must sign.
+  allowed_msg_types:
+    - /layer.oracle.MsgSubmitValue
+    - /cosmos.slashing.v1beta1.MsgUnjail
+    - /layer.reporter.MsgUnjailReporter
+
+  # enabled_rpcs: turn RPCs off without a rebuild (value false => Unimplemented).
+  # The blind primitives Sign (65-byte) and SignRaw (64-byte) are ALWAYS disabled
+  # in code regardless of this map — only the recompute-and-verify operations
+  # (SignBridgeCheckpoint, SignOracleAttestation) and the scoped SignTx can sign.
+  # enabled_rpcs:
+  #   sign_tx: false
+
+  # enable_reflection: gRPC server reflection. Lets any client enumerate the
+  # signing RPCs — keep false in production.
+  enable_reflection: false
+
 tls:
-  # CA certificate used to verify the validator's client certificate
+  # mTLS still secures the transport (the client must present a cert chained to
+  # this CA), but authorization is by OPERATION, not by client-cert CN. There are
+  # no per-cert *_allowed_cns knobs anymore: the signer can perform ONLY its four
+  # fixed operations and the blind primitives are hard-disabled.
+  # CA certificate used to verify the client certificate
   ca_cert: /etc/bridge-signer/tls/ca.crt
   # Sidecar's own TLS certificate and key
   server_cert: /etc/bridge-signer/tls/server.crt

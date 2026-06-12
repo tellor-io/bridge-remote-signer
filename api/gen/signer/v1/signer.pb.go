@@ -402,7 +402,109 @@ func (x *GetAddressResponse) GetAddress() string {
 	return ""
 }
 
-// GetChainIDRequest is empty; the chain ID is fixed server-side config.
+// SignTxRequest carries raw Cosmos SignDoc bytes for scope-checked signing.
+type SignTxRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// sign_doc is the raw protobuf-encoded cosmos.tx.v1beta1.SignDoc bytes
+	// (the exact bytes that will be sha256-hashed and signed).
+	SignDoc []byte `protobuf:"bytes,1,opt,name=sign_doc,json=signDoc,proto3" json:"sign_doc,omitempty"`
+	// request_id is an optional caller-assigned identifier for logs.
+	RequestId     string `protobuf:"bytes,2,opt,name=request_id,json=requestId,proto3" json:"request_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SignTxRequest) Reset() {
+	*x = SignTxRequest{}
+	mi := &file_signer_v1_signer_proto_msgTypes[8]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SignTxRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SignTxRequest) ProtoMessage() {}
+
+func (x *SignTxRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_signer_v1_signer_proto_msgTypes[8]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SignTxRequest.ProtoReflect.Descriptor instead.
+func (*SignTxRequest) Descriptor() ([]byte, []int) {
+	return file_signer_v1_signer_proto_rawDescGZIP(), []int{8}
+}
+
+func (x *SignTxRequest) GetSignDoc() []byte {
+	if x != nil {
+		return x.SignDoc
+	}
+	return nil
+}
+
+func (x *SignTxRequest) GetRequestId() string {
+	if x != nil {
+		return x.RequestId
+	}
+	return ""
+}
+
+// SignTxResponse contains the resulting cosmos-format signature.
+type SignTxResponse struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// signature is the 64-byte secp256k1 ECDSA signature (r || s).
+	Signature     []byte `protobuf:"bytes,1,opt,name=signature,proto3" json:"signature,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SignTxResponse) Reset() {
+	*x = SignTxResponse{}
+	mi := &file_signer_v1_signer_proto_msgTypes[9]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SignTxResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SignTxResponse) ProtoMessage() {}
+
+func (x *SignTxResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_signer_v1_signer_proto_msgTypes[9]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SignTxResponse.ProtoReflect.Descriptor instead.
+func (*SignTxResponse) Descriptor() ([]byte, []int) {
+	return file_signer_v1_signer_proto_rawDescGZIP(), []int{9}
+}
+
+func (x *SignTxResponse) GetSignature() []byte {
+	if x != nil {
+		return x.Signature
+	}
+	return nil
+}
+
+// GetChainIDRequest
 type GetChainIDRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	unknownFields protoimpl.UnknownFields
@@ -411,7 +513,7 @@ type GetChainIDRequest struct {
 
 func (x *GetChainIDRequest) Reset() {
 	*x = GetChainIDRequest{}
-	mi := &file_signer_v1_signer_proto_msgTypes[8]
+	mi := &file_signer_v1_signer_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -423,7 +525,7 @@ func (x *GetChainIDRequest) String() string {
 func (*GetChainIDRequest) ProtoMessage() {}
 
 func (x *GetChainIDRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_signer_v1_signer_proto_msgTypes[8]
+	mi := &file_signer_v1_signer_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -436,10 +538,10 @@ func (x *GetChainIDRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetChainIDRequest.ProtoReflect.Descriptor instead.
 func (*GetChainIDRequest) Descriptor() ([]byte, []int) {
-	return file_signer_v1_signer_proto_rawDescGZIP(), []int{8}
+	return file_signer_v1_signer_proto_rawDescGZIP(), []int{10}
 }
 
-// GetChainIDResponse contains the configured cosmos chain ID.
+// GetChainIDResponse contains the configured chain ID.
 type GetChainIDResponse struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// chain_id is the cosmos chain ID (e.g. "layertest-5").
@@ -450,7 +552,7 @@ type GetChainIDResponse struct {
 
 func (x *GetChainIDResponse) Reset() {
 	*x = GetChainIDResponse{}
-	mi := &file_signer_v1_signer_proto_msgTypes[9]
+	mi := &file_signer_v1_signer_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -462,7 +564,7 @@ func (x *GetChainIDResponse) String() string {
 func (*GetChainIDResponse) ProtoMessage() {}
 
 func (x *GetChainIDResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_signer_v1_signer_proto_msgTypes[9]
+	mi := &file_signer_v1_signer_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -475,7 +577,7 @@ func (x *GetChainIDResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetChainIDResponse.ProtoReflect.Descriptor instead.
 func (*GetChainIDResponse) Descriptor() ([]byte, []int) {
-	return file_signer_v1_signer_proto_rawDescGZIP(), []int{9}
+	return file_signer_v1_signer_proto_rawDescGZIP(), []int{11}
 }
 
 func (x *GetChainIDResponse) GetChainId() string {
@@ -483,6 +585,462 @@ func (x *GetChainIDResponse) GetChainId() string {
 		return x.ChainId
 	}
 	return ""
+}
+
+// BridgeValidator is a single entry of the bridge validator set, mirroring the
+// node's x/bridge types.BridgeValidator. The signer re-sorts and re-encodes the
+// set itself; caller ordering is not trusted.
+type BridgeValidator struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// ethereum_address is the raw 20-byte EVM address of the validator.
+	EthereumAddress []byte `protobuf:"bytes,1,opt,name=ethereum_address,json=ethereumAddress,proto3" json:"ethereum_address,omitempty"`
+	// power is the validator's bridge voting power.
+	Power         uint64 `protobuf:"varint,2,opt,name=power,proto3" json:"power,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *BridgeValidator) Reset() {
+	*x = BridgeValidator{}
+	mi := &file_signer_v1_signer_proto_msgTypes[12]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *BridgeValidator) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*BridgeValidator) ProtoMessage() {}
+
+func (x *BridgeValidator) ProtoReflect() protoreflect.Message {
+	mi := &file_signer_v1_signer_proto_msgTypes[12]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use BridgeValidator.ProtoReflect.Descriptor instead.
+func (*BridgeValidator) Descriptor() ([]byte, []int) {
+	return file_signer_v1_signer_proto_rawDescGZIP(), []int{12}
+}
+
+func (x *BridgeValidator) GetEthereumAddress() []byte {
+	if x != nil {
+		return x.EthereumAddress
+	}
+	return nil
+}
+
+func (x *BridgeValidator) GetPower() uint64 {
+	if x != nil {
+		return x.Power
+	}
+	return 0
+}
+
+// SignBridgeCheckpointRequest carries the STRUCTURED inputs the signer needs to
+// recompute the valset checkpoint locally (never a blind hash). The signer
+// recomputes the checkpoint and must match expected_checkpoint or fail closed.
+type SignBridgeCheckpointRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// domain_separator is the 32-byte checkpoint domain separator the node
+	// computed. The signer independently recomputes it from chain_id and asserts
+	// equality.
+	DomainSeparator []byte `protobuf:"bytes,1,opt,name=domain_separator,json=domainSeparator,proto3" json:"domain_separator,omitempty"`
+	// power_threshold is sum(powers)*2/3 (node integer math). Re-derived + checked.
+	PowerThreshold uint64 `protobuf:"varint,2,opt,name=power_threshold,json=powerThreshold,proto3" json:"power_threshold,omitempty"`
+	// validator_timestamp is the valset timestamp in UNIX MILLISECONDS.
+	ValidatorTimestamp uint64 `protobuf:"varint,3,opt,name=validator_timestamp,json=validatorTimestamp,proto3" json:"validator_timestamp,omitempty"`
+	// validator_set_hash is the node-computed keccak256 hash of the encoded
+	// validator set. The signer recomputes it and asserts equality.
+	ValidatorSetHash []byte `protobuf:"bytes,4,opt,name=validator_set_hash,json=validatorSetHash,proto3" json:"validator_set_hash,omitempty"`
+	// validator_set is the structured validator set. The signer applies the
+	// node's canonical sort before encoding (caller ordering is not trusted).
+	ValidatorSet []*BridgeValidator `protobuf:"bytes,5,rep,name=validator_set,json=validatorSet,proto3" json:"validator_set,omitempty"`
+	// block_height is the consensus block height (audit/context only).
+	BlockHeight uint64 `protobuf:"varint,6,opt,name=block_height,json=blockHeight,proto3" json:"block_height,omitempty"`
+	// checkpoint_index is the valset checkpoint index (audit/context only).
+	CheckpointIndex uint64 `protobuf:"varint,7,opt,name=checkpoint_index,json=checkpointIndex,proto3" json:"checkpoint_index,omitempty"`
+	// chain_id is the cosmos chain ID used to recompute the domain separator
+	// (mainnet => fixed "checkpoint" constant; else keccak256(abi.encode(...))).
+	ChainId string `protobuf:"bytes,8,opt,name=chain_id,json=chainId,proto3" json:"chain_id,omitempty"`
+	// expected_checkpoint is the 32-byte checkpoint the node computed. The signer
+	// recomputes the checkpoint from the structured inputs and MUST match this,
+	// else it returns an error and signs nothing.
+	ExpectedCheckpoint []byte `protobuf:"bytes,9,opt,name=expected_checkpoint,json=expectedCheckpoint,proto3" json:"expected_checkpoint,omitempty"`
+	// request_id is an optional caller-assigned identifier for logs.
+	RequestId     string `protobuf:"bytes,10,opt,name=request_id,json=requestId,proto3" json:"request_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SignBridgeCheckpointRequest) Reset() {
+	*x = SignBridgeCheckpointRequest{}
+	mi := &file_signer_v1_signer_proto_msgTypes[13]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SignBridgeCheckpointRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SignBridgeCheckpointRequest) ProtoMessage() {}
+
+func (x *SignBridgeCheckpointRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_signer_v1_signer_proto_msgTypes[13]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SignBridgeCheckpointRequest.ProtoReflect.Descriptor instead.
+func (*SignBridgeCheckpointRequest) Descriptor() ([]byte, []int) {
+	return file_signer_v1_signer_proto_rawDescGZIP(), []int{13}
+}
+
+func (x *SignBridgeCheckpointRequest) GetDomainSeparator() []byte {
+	if x != nil {
+		return x.DomainSeparator
+	}
+	return nil
+}
+
+func (x *SignBridgeCheckpointRequest) GetPowerThreshold() uint64 {
+	if x != nil {
+		return x.PowerThreshold
+	}
+	return 0
+}
+
+func (x *SignBridgeCheckpointRequest) GetValidatorTimestamp() uint64 {
+	if x != nil {
+		return x.ValidatorTimestamp
+	}
+	return 0
+}
+
+func (x *SignBridgeCheckpointRequest) GetValidatorSetHash() []byte {
+	if x != nil {
+		return x.ValidatorSetHash
+	}
+	return nil
+}
+
+func (x *SignBridgeCheckpointRequest) GetValidatorSet() []*BridgeValidator {
+	if x != nil {
+		return x.ValidatorSet
+	}
+	return nil
+}
+
+func (x *SignBridgeCheckpointRequest) GetBlockHeight() uint64 {
+	if x != nil {
+		return x.BlockHeight
+	}
+	return 0
+}
+
+func (x *SignBridgeCheckpointRequest) GetCheckpointIndex() uint64 {
+	if x != nil {
+		return x.CheckpointIndex
+	}
+	return 0
+}
+
+func (x *SignBridgeCheckpointRequest) GetChainId() string {
+	if x != nil {
+		return x.ChainId
+	}
+	return ""
+}
+
+func (x *SignBridgeCheckpointRequest) GetExpectedCheckpoint() []byte {
+	if x != nil {
+		return x.ExpectedCheckpoint
+	}
+	return nil
+}
+
+func (x *SignBridgeCheckpointRequest) GetRequestId() string {
+	if x != nil {
+		return x.RequestId
+	}
+	return ""
+}
+
+// SignBridgeCheckpointResponse contains the signature over the recomputed
+// checkpoint and the checkpoint itself (for caller verification).
+type SignBridgeCheckpointResponse struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// signature is the 64-byte secp256k1 ECDSA signature (r || s) over
+	// sha256(checkpoint). No v byte — the chain brute-forces the recovery id.
+	Signature []byte `protobuf:"bytes,1,opt,name=signature,proto3" json:"signature,omitempty"`
+	// checkpoint is the 32-byte keccak256 checkpoint the signer recomputed and
+	// signed (equals expected_checkpoint on success).
+	Checkpoint    []byte `protobuf:"bytes,2,opt,name=checkpoint,proto3" json:"checkpoint,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SignBridgeCheckpointResponse) Reset() {
+	*x = SignBridgeCheckpointResponse{}
+	mi := &file_signer_v1_signer_proto_msgTypes[14]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SignBridgeCheckpointResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SignBridgeCheckpointResponse) ProtoMessage() {}
+
+func (x *SignBridgeCheckpointResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_signer_v1_signer_proto_msgTypes[14]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SignBridgeCheckpointResponse.ProtoReflect.Descriptor instead.
+func (*SignBridgeCheckpointResponse) Descriptor() ([]byte, []int) {
+	return file_signer_v1_signer_proto_rawDescGZIP(), []int{14}
+}
+
+func (x *SignBridgeCheckpointResponse) GetSignature() []byte {
+	if x != nil {
+		return x.Signature
+	}
+	return nil
+}
+
+func (x *SignBridgeCheckpointResponse) GetCheckpoint() []byte {
+	if x != nil {
+		return x.Checkpoint
+	}
+	return nil
+}
+
+// SignOracleAttestationRequest carries the STRUCTURED inputs the signer needs to
+// recompute the oracle-attestation snapshot locally (never a blind hash). The
+// signer recomputes the snapshot via the byte-exact node encoder
+// (EncodeOracleAttestationData) and MUST match expected_snapshot or fail closed.
+type SignOracleAttestationRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// query_id is the attestation query id. Front-aligned into a bytes32 by the
+	// encoder (right zero-padded if < 32 bytes); must be <= 32 bytes.
+	QueryId []byte `protobuf:"bytes,1,opt,name=query_id,json=queryId,proto3" json:"query_id,omitempty"`
+	// value is the ALREADY-HEX-DECODED report value bytes. The node computes these
+	// as hex.DecodeString(Remove0xPrefix(valueString)); the request carries the
+	// resulting raw bytes directly. The signer ABI-packs them as the dynamic
+	// `bytes` argument (no further decoding) — do NOT send the 0x-prefixed string.
+	Value []byte `protobuf:"bytes,2,opt,name=value,proto3" json:"value,omitempty"`
+	// timestamp is the report aggregate timestamp (UNIX MILLISECONDS). ABI uint256.
+	Timestamp uint64 `protobuf:"varint,3,opt,name=timestamp,proto3" json:"timestamp,omitempty"`
+	// aggregate_power is the total reporter power for the aggregate. ABI uint256.
+	AggregatePower uint64 `protobuf:"varint,4,opt,name=aggregate_power,json=aggregatePower,proto3" json:"aggregate_power,omitempty"`
+	// previous_timestamp is the previous report timestamp (ms). ABI uint256.
+	PreviousTimestamp uint64 `protobuf:"varint,5,opt,name=previous_timestamp,json=previousTimestamp,proto3" json:"previous_timestamp,omitempty"`
+	// next_timestamp is the next report timestamp (ms). ABI uint256.
+	NextTimestamp uint64 `protobuf:"varint,6,opt,name=next_timestamp,json=nextTimestamp,proto3" json:"next_timestamp,omitempty"`
+	// valset_checkpoint is the 32-byte valset checkpoint. Front-aligned into a
+	// bytes32 by the encoder (right zero-padded if < 32 bytes); must be <= 32 bytes.
+	ValsetCheckpoint []byte `protobuf:"bytes,7,opt,name=valset_checkpoint,json=valsetCheckpoint,proto3" json:"valset_checkpoint,omitempty"`
+	// attestation_timestamp is the attestation timestamp (ms). ABI uint256.
+	AttestationTimestamp uint64 `protobuf:"varint,8,opt,name=attestation_timestamp,json=attestationTimestamp,proto3" json:"attestation_timestamp,omitempty"`
+	// last_consensus_timestamp is the last consensus timestamp (ms). ABI uint256.
+	LastConsensusTimestamp uint64 `protobuf:"varint,9,opt,name=last_consensus_timestamp,json=lastConsensusTimestamp,proto3" json:"last_consensus_timestamp,omitempty"`
+	// expected_snapshot is the 32-byte snapshot (keccak256 of the ABI-packed
+	// attestation data) the node computed. The signer recomputes the snapshot from
+	// the structured inputs and MUST match this, else it returns an error and signs
+	// nothing.
+	ExpectedSnapshot []byte `protobuf:"bytes,10,opt,name=expected_snapshot,json=expectedSnapshot,proto3" json:"expected_snapshot,omitempty"`
+	// request_id is an optional caller-assigned identifier for logs.
+	RequestId     string `protobuf:"bytes,11,opt,name=request_id,json=requestId,proto3" json:"request_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SignOracleAttestationRequest) Reset() {
+	*x = SignOracleAttestationRequest{}
+	mi := &file_signer_v1_signer_proto_msgTypes[15]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SignOracleAttestationRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SignOracleAttestationRequest) ProtoMessage() {}
+
+func (x *SignOracleAttestationRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_signer_v1_signer_proto_msgTypes[15]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SignOracleAttestationRequest.ProtoReflect.Descriptor instead.
+func (*SignOracleAttestationRequest) Descriptor() ([]byte, []int) {
+	return file_signer_v1_signer_proto_rawDescGZIP(), []int{15}
+}
+
+func (x *SignOracleAttestationRequest) GetQueryId() []byte {
+	if x != nil {
+		return x.QueryId
+	}
+	return nil
+}
+
+func (x *SignOracleAttestationRequest) GetValue() []byte {
+	if x != nil {
+		return x.Value
+	}
+	return nil
+}
+
+func (x *SignOracleAttestationRequest) GetTimestamp() uint64 {
+	if x != nil {
+		return x.Timestamp
+	}
+	return 0
+}
+
+func (x *SignOracleAttestationRequest) GetAggregatePower() uint64 {
+	if x != nil {
+		return x.AggregatePower
+	}
+	return 0
+}
+
+func (x *SignOracleAttestationRequest) GetPreviousTimestamp() uint64 {
+	if x != nil {
+		return x.PreviousTimestamp
+	}
+	return 0
+}
+
+func (x *SignOracleAttestationRequest) GetNextTimestamp() uint64 {
+	if x != nil {
+		return x.NextTimestamp
+	}
+	return 0
+}
+
+func (x *SignOracleAttestationRequest) GetValsetCheckpoint() []byte {
+	if x != nil {
+		return x.ValsetCheckpoint
+	}
+	return nil
+}
+
+func (x *SignOracleAttestationRequest) GetAttestationTimestamp() uint64 {
+	if x != nil {
+		return x.AttestationTimestamp
+	}
+	return 0
+}
+
+func (x *SignOracleAttestationRequest) GetLastConsensusTimestamp() uint64 {
+	if x != nil {
+		return x.LastConsensusTimestamp
+	}
+	return 0
+}
+
+func (x *SignOracleAttestationRequest) GetExpectedSnapshot() []byte {
+	if x != nil {
+		return x.ExpectedSnapshot
+	}
+	return nil
+}
+
+func (x *SignOracleAttestationRequest) GetRequestId() string {
+	if x != nil {
+		return x.RequestId
+	}
+	return ""
+}
+
+// SignOracleAttestationResponse contains the signature over the recomputed
+// snapshot and the snapshot itself (for caller verification).
+type SignOracleAttestationResponse struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// signature is the 64-byte secp256k1 ECDSA signature (r || s) over
+	// sha256(snapshot). No v byte — the chain brute-forces the recovery id.
+	Signature []byte `protobuf:"bytes,1,opt,name=signature,proto3" json:"signature,omitempty"`
+	// snapshot is the 32-byte keccak256 attestation snapshot the signer recomputed
+	// and signed (equals expected_snapshot on success).
+	Snapshot      []byte `protobuf:"bytes,2,opt,name=snapshot,proto3" json:"snapshot,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SignOracleAttestationResponse) Reset() {
+	*x = SignOracleAttestationResponse{}
+	mi := &file_signer_v1_signer_proto_msgTypes[16]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SignOracleAttestationResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SignOracleAttestationResponse) ProtoMessage() {}
+
+func (x *SignOracleAttestationResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_signer_v1_signer_proto_msgTypes[16]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SignOracleAttestationResponse.ProtoReflect.Descriptor instead.
+func (*SignOracleAttestationResponse) Descriptor() ([]byte, []int) {
+	return file_signer_v1_signer_proto_rawDescGZIP(), []int{16}
+}
+
+func (x *SignOracleAttestationResponse) GetSignature() []byte {
+	if x != nil {
+		return x.Signature
+	}
+	return nil
+}
+
+func (x *SignOracleAttestationResponse) GetSnapshot() []byte {
+	if x != nil {
+		return x.Snapshot
+	}
+	return nil
 }
 
 var File_signer_v1_signer_proto protoreflect.FileDescriptor
@@ -509,18 +1067,65 @@ const file_signer_v1_signer_proto_rawDesc = "" +
 	"\x11GetAddressRequest\x12\x16\n" +
 	"\x06prefix\x18\x01 \x01(\tR\x06prefix\".\n" +
 	"\x12GetAddressResponse\x12\x18\n" +
-	"\aaddress\x18\x01 \x01(\tR\aaddress\"\x13\n" +
+	"\aaddress\x18\x01 \x01(\tR\aaddress\"I\n" +
+	"\rSignTxRequest\x12\x19\n" +
+	"\bsign_doc\x18\x01 \x01(\fR\asignDoc\x12\x1d\n" +
+	"\n" +
+	"request_id\x18\x02 \x01(\tR\trequestId\".\n" +
+	"\x0eSignTxResponse\x12\x1c\n" +
+	"\tsignature\x18\x01 \x01(\fR\tsignature\"\x13\n" +
 	"\x11GetChainIDRequest\"/\n" +
 	"\x12GetChainIDResponse\x12\x19\n" +
-	"\bchain_id\x18\x01 \x01(\tR\achainId2\xf0\x02\n" +
+	"\bchain_id\x18\x01 \x01(\tR\achainId\"R\n" +
+	"\x0fBridgeValidator\x12)\n" +
+	"\x10ethereum_address\x18\x01 \x01(\fR\x0fethereumAddress\x12\x14\n" +
+	"\x05power\x18\x02 \x01(\x04R\x05power\"\xca\x03\n" +
+	"\x1bSignBridgeCheckpointRequest\x12)\n" +
+	"\x10domain_separator\x18\x01 \x01(\fR\x0fdomainSeparator\x12'\n" +
+	"\x0fpower_threshold\x18\x02 \x01(\x04R\x0epowerThreshold\x12/\n" +
+	"\x13validator_timestamp\x18\x03 \x01(\x04R\x12validatorTimestamp\x12,\n" +
+	"\x12validator_set_hash\x18\x04 \x01(\fR\x10validatorSetHash\x12?\n" +
+	"\rvalidator_set\x18\x05 \x03(\v2\x1a.signer.v1.BridgeValidatorR\fvalidatorSet\x12!\n" +
+	"\fblock_height\x18\x06 \x01(\x04R\vblockHeight\x12)\n" +
+	"\x10checkpoint_index\x18\a \x01(\x04R\x0fcheckpointIndex\x12\x19\n" +
+	"\bchain_id\x18\b \x01(\tR\achainId\x12/\n" +
+	"\x13expected_checkpoint\x18\t \x01(\fR\x12expectedCheckpoint\x12\x1d\n" +
+	"\n" +
+	"request_id\x18\n" +
+	" \x01(\tR\trequestId\"\\\n" +
+	"\x1cSignBridgeCheckpointResponse\x12\x1c\n" +
+	"\tsignature\x18\x01 \x01(\fR\tsignature\x12\x1e\n" +
+	"\n" +
+	"checkpoint\x18\x02 \x01(\fR\n" +
+	"checkpoint\"\xd4\x03\n" +
+	"\x1cSignOracleAttestationRequest\x12\x19\n" +
+	"\bquery_id\x18\x01 \x01(\fR\aqueryId\x12\x14\n" +
+	"\x05value\x18\x02 \x01(\fR\x05value\x12\x1c\n" +
+	"\ttimestamp\x18\x03 \x01(\x04R\ttimestamp\x12'\n" +
+	"\x0faggregate_power\x18\x04 \x01(\x04R\x0eaggregatePower\x12-\n" +
+	"\x12previous_timestamp\x18\x05 \x01(\x04R\x11previousTimestamp\x12%\n" +
+	"\x0enext_timestamp\x18\x06 \x01(\x04R\rnextTimestamp\x12+\n" +
+	"\x11valset_checkpoint\x18\a \x01(\fR\x10valsetCheckpoint\x123\n" +
+	"\x15attestation_timestamp\x18\b \x01(\x04R\x14attestationTimestamp\x128\n" +
+	"\x18last_consensus_timestamp\x18\t \x01(\x04R\x16lastConsensusTimestamp\x12+\n" +
+	"\x11expected_snapshot\x18\n" +
+	" \x01(\fR\x10expectedSnapshot\x12\x1d\n" +
+	"\n" +
+	"request_id\x18\v \x01(\tR\trequestId\"Y\n" +
+	"\x1dSignOracleAttestationResponse\x12\x1c\n" +
+	"\tsignature\x18\x01 \x01(\fR\tsignature\x12\x1a\n" +
+	"\bsnapshot\x18\x02 \x01(\fR\bsnapshot2\x84\x05\n" +
 	"\fBridgeSigner\x127\n" +
 	"\x04Sign\x12\x16.signer.v1.SignRequest\x1a\x17.signer.v1.SignResponse\x12O\n" +
 	"\fGetPublicKey\x12\x1e.signer.v1.GetPublicKeyRequest\x1a\x1f.signer.v1.GetPublicKeyResponse\x12@\n" +
 	"\aSignRaw\x12\x19.signer.v1.SignRawRequest\x1a\x1a.signer.v1.SignRawResponse\x12I\n" +
 	"\n" +
-	"GetAddress\x12\x1c.signer.v1.GetAddressRequest\x1a\x1d.signer.v1.GetAddressResponse\x12I\n" +
+	"GetAddress\x12\x1c.signer.v1.GetAddressRequest\x1a\x1d.signer.v1.GetAddressResponse\x12=\n" +
+	"\x06SignTx\x12\x18.signer.v1.SignTxRequest\x1a\x19.signer.v1.SignTxResponse\x12I\n" +
 	"\n" +
-	"GetChainID\x12\x1c.signer.v1.GetChainIDRequest\x1a\x1d.signer.v1.GetChainIDResponseB?Z=github.com/tellor-io/bridge-signer/api/gen/signer/v1;signerv1b\x06proto3"
+	"GetChainID\x12\x1c.signer.v1.GetChainIDRequest\x1a\x1d.signer.v1.GetChainIDResponse\x12g\n" +
+	"\x14SignBridgeCheckpoint\x12&.signer.v1.SignBridgeCheckpointRequest\x1a'.signer.v1.SignBridgeCheckpointResponse\x12j\n" +
+	"\x15SignOracleAttestation\x12'.signer.v1.SignOracleAttestationRequest\x1a(.signer.v1.SignOracleAttestationResponseB?Z=github.com/tellor-io/bridge-signer/api/gen/signer/v1;signerv1b\x06proto3"
 
 var (
 	file_signer_v1_signer_proto_rawDescOnce sync.Once
@@ -534,35 +1139,49 @@ func file_signer_v1_signer_proto_rawDescGZIP() []byte {
 	return file_signer_v1_signer_proto_rawDescData
 }
 
-var file_signer_v1_signer_proto_msgTypes = make([]protoimpl.MessageInfo, 10)
+var file_signer_v1_signer_proto_msgTypes = make([]protoimpl.MessageInfo, 17)
 var file_signer_v1_signer_proto_goTypes = []any{
-	(*SignRequest)(nil),          // 0: signer.v1.SignRequest
-	(*SignResponse)(nil),         // 1: signer.v1.SignResponse
-	(*GetPublicKeyRequest)(nil),  // 2: signer.v1.GetPublicKeyRequest
-	(*GetPublicKeyResponse)(nil), // 3: signer.v1.GetPublicKeyResponse
-	(*SignRawRequest)(nil),       // 4: signer.v1.SignRawRequest
-	(*SignRawResponse)(nil),      // 5: signer.v1.SignRawResponse
-	(*GetAddressRequest)(nil),    // 6: signer.v1.GetAddressRequest
-	(*GetAddressResponse)(nil),   // 7: signer.v1.GetAddressResponse
-	(*GetChainIDRequest)(nil),    // 8: signer.v1.GetChainIDRequest
-	(*GetChainIDResponse)(nil),   // 9: signer.v1.GetChainIDResponse
+	(*SignRequest)(nil),                   // 0: signer.v1.SignRequest
+	(*SignResponse)(nil),                  // 1: signer.v1.SignResponse
+	(*GetPublicKeyRequest)(nil),           // 2: signer.v1.GetPublicKeyRequest
+	(*GetPublicKeyResponse)(nil),          // 3: signer.v1.GetPublicKeyResponse
+	(*SignRawRequest)(nil),                // 4: signer.v1.SignRawRequest
+	(*SignRawResponse)(nil),               // 5: signer.v1.SignRawResponse
+	(*GetAddressRequest)(nil),             // 6: signer.v1.GetAddressRequest
+	(*GetAddressResponse)(nil),            // 7: signer.v1.GetAddressResponse
+	(*SignTxRequest)(nil),                 // 8: signer.v1.SignTxRequest
+	(*SignTxResponse)(nil),                // 9: signer.v1.SignTxResponse
+	(*GetChainIDRequest)(nil),             // 10: signer.v1.GetChainIDRequest
+	(*GetChainIDResponse)(nil),            // 11: signer.v1.GetChainIDResponse
+	(*BridgeValidator)(nil),               // 12: signer.v1.BridgeValidator
+	(*SignBridgeCheckpointRequest)(nil),   // 13: signer.v1.SignBridgeCheckpointRequest
+	(*SignBridgeCheckpointResponse)(nil),  // 14: signer.v1.SignBridgeCheckpointResponse
+	(*SignOracleAttestationRequest)(nil),  // 15: signer.v1.SignOracleAttestationRequest
+	(*SignOracleAttestationResponse)(nil), // 16: signer.v1.SignOracleAttestationResponse
 }
 var file_signer_v1_signer_proto_depIdxs = []int32{
-	0, // 0: signer.v1.BridgeSigner.Sign:input_type -> signer.v1.SignRequest
-	2, // 1: signer.v1.BridgeSigner.GetPublicKey:input_type -> signer.v1.GetPublicKeyRequest
-	4, // 2: signer.v1.BridgeSigner.SignRaw:input_type -> signer.v1.SignRawRequest
-	6, // 3: signer.v1.BridgeSigner.GetAddress:input_type -> signer.v1.GetAddressRequest
-	8, // 4: signer.v1.BridgeSigner.GetChainID:input_type -> signer.v1.GetChainIDRequest
-	1, // 5: signer.v1.BridgeSigner.Sign:output_type -> signer.v1.SignResponse
-	3, // 6: signer.v1.BridgeSigner.GetPublicKey:output_type -> signer.v1.GetPublicKeyResponse
-	5, // 7: signer.v1.BridgeSigner.SignRaw:output_type -> signer.v1.SignRawResponse
-	7, // 8: signer.v1.BridgeSigner.GetAddress:output_type -> signer.v1.GetAddressResponse
-	9, // 9: signer.v1.BridgeSigner.GetChainID:output_type -> signer.v1.GetChainIDResponse
-	5, // [5:10] is the sub-list for method output_type
-	0, // [0:5] is the sub-list for method input_type
-	0, // [0:0] is the sub-list for extension type_name
-	0, // [0:0] is the sub-list for extension extendee
-	0, // [0:0] is the sub-list for field type_name
+	12, // 0: signer.v1.SignBridgeCheckpointRequest.validator_set:type_name -> signer.v1.BridgeValidator
+	0,  // 1: signer.v1.BridgeSigner.Sign:input_type -> signer.v1.SignRequest
+	2,  // 2: signer.v1.BridgeSigner.GetPublicKey:input_type -> signer.v1.GetPublicKeyRequest
+	4,  // 3: signer.v1.BridgeSigner.SignRaw:input_type -> signer.v1.SignRawRequest
+	6,  // 4: signer.v1.BridgeSigner.GetAddress:input_type -> signer.v1.GetAddressRequest
+	8,  // 5: signer.v1.BridgeSigner.SignTx:input_type -> signer.v1.SignTxRequest
+	10, // 6: signer.v1.BridgeSigner.GetChainID:input_type -> signer.v1.GetChainIDRequest
+	13, // 7: signer.v1.BridgeSigner.SignBridgeCheckpoint:input_type -> signer.v1.SignBridgeCheckpointRequest
+	15, // 8: signer.v1.BridgeSigner.SignOracleAttestation:input_type -> signer.v1.SignOracleAttestationRequest
+	1,  // 9: signer.v1.BridgeSigner.Sign:output_type -> signer.v1.SignResponse
+	3,  // 10: signer.v1.BridgeSigner.GetPublicKey:output_type -> signer.v1.GetPublicKeyResponse
+	5,  // 11: signer.v1.BridgeSigner.SignRaw:output_type -> signer.v1.SignRawResponse
+	7,  // 12: signer.v1.BridgeSigner.GetAddress:output_type -> signer.v1.GetAddressResponse
+	9,  // 13: signer.v1.BridgeSigner.SignTx:output_type -> signer.v1.SignTxResponse
+	11, // 14: signer.v1.BridgeSigner.GetChainID:output_type -> signer.v1.GetChainIDResponse
+	14, // 15: signer.v1.BridgeSigner.SignBridgeCheckpoint:output_type -> signer.v1.SignBridgeCheckpointResponse
+	16, // 16: signer.v1.BridgeSigner.SignOracleAttestation:output_type -> signer.v1.SignOracleAttestationResponse
+	9,  // [9:17] is the sub-list for method output_type
+	1,  // [1:9] is the sub-list for method input_type
+	1,  // [1:1] is the sub-list for extension type_name
+	1,  // [1:1] is the sub-list for extension extendee
+	0,  // [0:1] is the sub-list for field type_name
 }
 
 func init() { file_signer_v1_signer_proto_init() }
@@ -576,7 +1195,7 @@ func file_signer_v1_signer_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_signer_v1_signer_proto_rawDesc), len(file_signer_v1_signer_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   10,
+			NumMessages:   17,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

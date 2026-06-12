@@ -19,11 +19,14 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	BridgeSigner_Sign_FullMethodName         = "/signer.v1.BridgeSigner/Sign"
-	BridgeSigner_GetPublicKey_FullMethodName = "/signer.v1.BridgeSigner/GetPublicKey"
-	BridgeSigner_SignRaw_FullMethodName      = "/signer.v1.BridgeSigner/SignRaw"
-	BridgeSigner_GetAddress_FullMethodName   = "/signer.v1.BridgeSigner/GetAddress"
-	BridgeSigner_GetChainID_FullMethodName   = "/signer.v1.BridgeSigner/GetChainID"
+	BridgeSigner_Sign_FullMethodName                  = "/signer.v1.BridgeSigner/Sign"
+	BridgeSigner_GetPublicKey_FullMethodName          = "/signer.v1.BridgeSigner/GetPublicKey"
+	BridgeSigner_SignRaw_FullMethodName               = "/signer.v1.BridgeSigner/SignRaw"
+	BridgeSigner_GetAddress_FullMethodName            = "/signer.v1.BridgeSigner/GetAddress"
+	BridgeSigner_SignTx_FullMethodName                = "/signer.v1.BridgeSigner/SignTx"
+	BridgeSigner_GetChainID_FullMethodName            = "/signer.v1.BridgeSigner/GetChainID"
+	BridgeSigner_SignBridgeCheckpoint_FullMethodName  = "/signer.v1.BridgeSigner/SignBridgeCheckpoint"
+	BridgeSigner_SignOracleAttestation_FullMethodName = "/signer.v1.BridgeSigner/SignOracleAttestation"
 )
 
 // BridgeSignerClient is the client API for BridgeSigner service.
@@ -51,9 +54,30 @@ type BridgeSignerClient interface {
 	// using the given prefix (e.g. "tellor"). Allows the reporter to
 	// discover its own address without hard-coding it in config.
 	GetAddress(ctx context.Context, in *GetAddressRequest, opts ...grpc.CallOption) (*GetAddressResponse, error)
+	// SignTx accepts raw Cosmos SignDoc bytes, validates that every message
+	// type_url is on the server's allowlist, then signs with the secp256k1
+	// key. Returns a 64-byte r||s signature (no v byte).
+	// Rejects with PERMISSION_DENIED if any message type is not allowed.
+	SignTx(ctx context.Context, in *SignTxRequest, opts ...grpc.CallOption) (*SignTxResponse, error)
 	// GetChainID returns the cosmos chain ID the signer is configured for,
 	// so callers (e.g. the monitor) can discover it without a local env var.
 	GetChainID(ctx context.Context, in *GetChainIDRequest, opts ...grpc.CallOption) (*GetChainIDResponse, error)
+	// SignBridgeCheckpoint accepts the STRUCTURED valset-checkpoint inputs
+	// (not a blind hash), recomputes the checkpoint itself using the byte-exact
+	// node encoder, validates it against the caller-supplied expected_checkpoint,
+	// enforces self-membership + a monotonic replay guard, then signs
+	// sha256(checkpoint) with the secp256k1 key. Returns a 64-byte r||s signature
+	// (no v byte) — the chain consumer brute-forces the recovery id itself.
+	// FAILS CLOSED (signs nothing) on any mismatch.
+	SignBridgeCheckpoint(ctx context.Context, in *SignBridgeCheckpointRequest, opts ...grpc.CallOption) (*SignBridgeCheckpointResponse, error)
+	// SignOracleAttestation accepts the STRUCTURED oracle-attestation inputs (not a
+	// blind hash), recomputes the attestation snapshot itself using the byte-exact
+	// node encoder (EncodeOracleAttestationData), validates it against the
+	// caller-supplied expected_snapshot, then signs sha256(snapshot) with the
+	// secp256k1 key. Returns a 64-byte r||s signature (no v byte) — the chain
+	// consumer brute-forces the recovery id itself. FAILS CLOSED (signs nothing)
+	// on any mismatch.
+	SignOracleAttestation(ctx context.Context, in *SignOracleAttestationRequest, opts ...grpc.CallOption) (*SignOracleAttestationResponse, error)
 }
 
 type bridgeSignerClient struct {
@@ -104,10 +128,40 @@ func (c *bridgeSignerClient) GetAddress(ctx context.Context, in *GetAddressReque
 	return out, nil
 }
 
+func (c *bridgeSignerClient) SignTx(ctx context.Context, in *SignTxRequest, opts ...grpc.CallOption) (*SignTxResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(SignTxResponse)
+	err := c.cc.Invoke(ctx, BridgeSigner_SignTx_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 func (c *bridgeSignerClient) GetChainID(ctx context.Context, in *GetChainIDRequest, opts ...grpc.CallOption) (*GetChainIDResponse, error) {
 	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
 	out := new(GetChainIDResponse)
 	err := c.cc.Invoke(ctx, BridgeSigner_GetChainID_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *bridgeSignerClient) SignBridgeCheckpoint(ctx context.Context, in *SignBridgeCheckpointRequest, opts ...grpc.CallOption) (*SignBridgeCheckpointResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(SignBridgeCheckpointResponse)
+	err := c.cc.Invoke(ctx, BridgeSigner_SignBridgeCheckpoint_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *bridgeSignerClient) SignOracleAttestation(ctx context.Context, in *SignOracleAttestationRequest, opts ...grpc.CallOption) (*SignOracleAttestationResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(SignOracleAttestationResponse)
+	err := c.cc.Invoke(ctx, BridgeSigner_SignOracleAttestation_FullMethodName, in, out, cOpts...)
 	if err != nil {
 		return nil, err
 	}
@@ -139,9 +193,30 @@ type BridgeSignerServer interface {
 	// using the given prefix (e.g. "tellor"). Allows the reporter to
 	// discover its own address without hard-coding it in config.
 	GetAddress(context.Context, *GetAddressRequest) (*GetAddressResponse, error)
+	// SignTx accepts raw Cosmos SignDoc bytes, validates that every message
+	// type_url is on the server's allowlist, then signs with the secp256k1
+	// key. Returns a 64-byte r||s signature (no v byte).
+	// Rejects with PERMISSION_DENIED if any message type is not allowed.
+	SignTx(context.Context, *SignTxRequest) (*SignTxResponse, error)
 	// GetChainID returns the cosmos chain ID the signer is configured for,
 	// so callers (e.g. the monitor) can discover it without a local env var.
 	GetChainID(context.Context, *GetChainIDRequest) (*GetChainIDResponse, error)
+	// SignBridgeCheckpoint accepts the STRUCTURED valset-checkpoint inputs
+	// (not a blind hash), recomputes the checkpoint itself using the byte-exact
+	// node encoder, validates it against the caller-supplied expected_checkpoint,
+	// enforces self-membership + a monotonic replay guard, then signs
+	// sha256(checkpoint) with the secp256k1 key. Returns a 64-byte r||s signature
+	// (no v byte) — the chain consumer brute-forces the recovery id itself.
+	// FAILS CLOSED (signs nothing) on any mismatch.
+	SignBridgeCheckpoint(context.Context, *SignBridgeCheckpointRequest) (*SignBridgeCheckpointResponse, error)
+	// SignOracleAttestation accepts the STRUCTURED oracle-attestation inputs (not a
+	// blind hash), recomputes the attestation snapshot itself using the byte-exact
+	// node encoder (EncodeOracleAttestationData), validates it against the
+	// caller-supplied expected_snapshot, then signs sha256(snapshot) with the
+	// secp256k1 key. Returns a 64-byte r||s signature (no v byte) — the chain
+	// consumer brute-forces the recovery id itself. FAILS CLOSED (signs nothing)
+	// on any mismatch.
+	SignOracleAttestation(context.Context, *SignOracleAttestationRequest) (*SignOracleAttestationResponse, error)
 	mustEmbedUnimplementedBridgeSignerServer()
 }
 
@@ -164,8 +239,17 @@ func (UnimplementedBridgeSignerServer) SignRaw(context.Context, *SignRawRequest)
 func (UnimplementedBridgeSignerServer) GetAddress(context.Context, *GetAddressRequest) (*GetAddressResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetAddress not implemented")
 }
+func (UnimplementedBridgeSignerServer) SignTx(context.Context, *SignTxRequest) (*SignTxResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method SignTx not implemented")
+}
 func (UnimplementedBridgeSignerServer) GetChainID(context.Context, *GetChainIDRequest) (*GetChainIDResponse, error) {
 	return nil, status.Error(codes.Unimplemented, "method GetChainID not implemented")
+}
+func (UnimplementedBridgeSignerServer) SignBridgeCheckpoint(context.Context, *SignBridgeCheckpointRequest) (*SignBridgeCheckpointResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method SignBridgeCheckpoint not implemented")
+}
+func (UnimplementedBridgeSignerServer) SignOracleAttestation(context.Context, *SignOracleAttestationRequest) (*SignOracleAttestationResponse, error) {
+	return nil, status.Error(codes.Unimplemented, "method SignOracleAttestation not implemented")
 }
 func (UnimplementedBridgeSignerServer) mustEmbedUnimplementedBridgeSignerServer() {}
 func (UnimplementedBridgeSignerServer) testEmbeddedByValue()                      {}
@@ -260,6 +344,24 @@ func _BridgeSigner_GetAddress_Handler(srv interface{}, ctx context.Context, dec 
 	return interceptor(ctx, in, info, handler)
 }
 
+func _BridgeSigner_SignTx_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SignTxRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(BridgeSignerServer).SignTx(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: BridgeSigner_SignTx_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(BridgeSignerServer).SignTx(ctx, req.(*SignTxRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 func _BridgeSigner_GetChainID_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(GetChainIDRequest)
 	if err := dec(in); err != nil {
@@ -274,6 +376,42 @@ func _BridgeSigner_GetChainID_Handler(srv interface{}, ctx context.Context, dec 
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
 		return srv.(BridgeSignerServer).GetChainID(ctx, req.(*GetChainIDRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _BridgeSigner_SignBridgeCheckpoint_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SignBridgeCheckpointRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(BridgeSignerServer).SignBridgeCheckpoint(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: BridgeSigner_SignBridgeCheckpoint_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(BridgeSignerServer).SignBridgeCheckpoint(ctx, req.(*SignBridgeCheckpointRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _BridgeSigner_SignOracleAttestation_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(SignOracleAttestationRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(BridgeSignerServer).SignOracleAttestation(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: BridgeSigner_SignOracleAttestation_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(BridgeSignerServer).SignOracleAttestation(ctx, req.(*SignOracleAttestationRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -302,8 +440,20 @@ var BridgeSigner_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _BridgeSigner_GetAddress_Handler,
 		},
 		{
+			MethodName: "SignTx",
+			Handler:    _BridgeSigner_SignTx_Handler,
+		},
+		{
 			MethodName: "GetChainID",
 			Handler:    _BridgeSigner_GetChainID_Handler,
+		},
+		{
+			MethodName: "SignBridgeCheckpoint",
+			Handler:    _BridgeSigner_SignBridgeCheckpoint_Handler,
+		},
+		{
+			MethodName: "SignOracleAttestation",
+			Handler:    _BridgeSigner_SignOracleAttestation_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

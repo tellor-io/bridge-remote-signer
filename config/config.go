@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
 	"time"
 
 	"gopkg.in/yaml.v3"
@@ -91,6 +92,42 @@ type ServerConfig struct {
 
 	// Default: 1MB
 	MaxRecvMsgSize int `yaml:"max_recv_msg_size"`
+
+	// AllowedMsgTypes is the allowlist of Cosmos message type_urls that
+	// SignTx will accept. If empty, SignTx rejects all requests.
+	// Example: ["/layer.oracle.MsgSubmitValue", "/layer.bridge.MsgSubmitBridgeValsetSignatures"]
+	AllowedMsgTypes []string `yaml:"allowed_msg_types"`
+
+	// CheckpointGuardStateFile is the path to the small high-water-mark file
+	// backing the SignBridgeCheckpoint monotonic replay guard. Defaults to a
+	// file next to the consensus state. Empty disables cross-restart protection.
+	CheckpointGuardStateFile string `yaml:"checkpoint_guard_state_file"`
+
+	// EnabledRPCs lets sensitive RPCs be turned off without a rebuild. Keys are
+	// short RPC names ("sign_raw", "sign_tx", "sign_bridge_checkpoint"); a value
+	// of false disables that RPC (returns Unimplemented). Missing => enabled.
+	// All RPCs are enabled by default.
+	EnabledRPCs map[string]bool `yaml:"enabled_rpcs"`
+
+	// EnableReflection turns on the gRPC server reflection service. Reflection
+	// lets any connected client enumerate the full service surface (including the
+	// signing RPCs), so it is OFF by default and should stay off in production —
+	// enable only for local debugging with grpcurl.
+	EnableReflection bool `yaml:"enable_reflection"`
+}
+
+// knownRPCShortNames is the set of short RPC names accepted in
+// server.enabled_rpcs. Keep in sync with shortRPCNameToFullMethod in
+// server/auth.go (a typo'd key would otherwise silently leave an RPC enabled).
+var knownRPCShortNames = map[string]struct{}{
+	"sign":                    {},
+	"sign_raw":                {},
+	"sign_tx":                 {},
+	"sign_bridge_checkpoint":  {},
+	"sign_oracle_attestation": {},
+	"get_public_key":          {},
+	"get_address":             {},
+	"get_chain_id":            {},
 }
 
 // TLSConfig holds paths to the mTLS certificate material.
@@ -115,6 +152,20 @@ type LogConfig struct {
 
 	// Default: "json"
 	Format string `yaml:"format"`
+}
+
+// CheckpointGuardStatePath returns the path backing the SignBridgeCheckpoint
+// monotonic replay guard. If explicitly configured it is used verbatim;
+// otherwise it defaults to "bridge_checkpoint_state.json" alongside the
+// consensus state file (or empty if neither is set — in-memory guard only).
+func (c *Config) CheckpointGuardStatePath() string {
+	if c.Server.CheckpointGuardStateFile != "" {
+		return c.Server.CheckpointGuardStateFile
+	}
+	if c.Consensus.StateFile != "" {
+		return filepath.Join(filepath.Dir(c.Consensus.StateFile), "bridge_checkpoint_state.json")
+	}
+	return ""
 }
 
 // Load reads and validates a Config from a YAML file at path.
@@ -229,6 +280,15 @@ func (c *Config) validate() error {
 			if _, err := os.Stat(path); err != nil {
 				return fmt.Errorf("tls file %q: %w", path, err)
 			}
+		}
+	}
+
+	// enabled_rpcs keys must be recognized short RPC names; a typo would
+	// otherwise silently leave a sensitive RPC enabled.
+	for name := range c.Server.EnabledRPCs {
+		if _, ok := knownRPCShortNames[name]; !ok {
+			return fmt.Errorf("server.enabled_rpcs has unknown RPC name %q "+
+				"(valid: sign, sign_raw, sign_tx, sign_bridge_checkpoint, sign_oracle_attestation, get_public_key, get_address, get_chain_id)", name)
 		}
 	}
 

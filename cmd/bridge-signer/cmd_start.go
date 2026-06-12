@@ -161,14 +161,30 @@ func runDaemon(configPath string) error {
 		}
 	}
 
+	// Authorization is by OPERATION, not by client certificate: each handler is
+	// either a recompute-and-verify operation (SignBridgeCheckpoint,
+	// SignOracleAttestation), a config-scoped operation (SignTx allowlist), or a
+	// hard-disabled blind primitive (Sign, SignRaw). mTLS still secures the
+	// transport, but the client-cert CN is not consulted for authorization.
+
+	// Map short RPC names from config to fully-qualified gRPC method names.
+	enabledRPCs := server.EnabledRPCsFromConfig(cfg.Server.EnabledRPCs)
+
 	// Build and register the gRPC server.
-	srv := server.New(s, logger, server.Config{
-		ListenAddr:     cfg.Server.ListenAddr,
-		RequestTimeout: cfg.Server.RequestTimeout,
-		MaxRecvMsgSize: cfg.Server.MaxRecvMsgSize,
-		Credentials:    creds,
-		ChainID:        cfg.ChainID,
+	srv, err := server.New(s, logger, server.Config{
+		ListenAddr:               cfg.Server.ListenAddr,
+		RequestTimeout:           cfg.Server.RequestTimeout,
+		MaxRecvMsgSize:           cfg.Server.MaxRecvMsgSize,
+		Credentials:              creds,
+		AllowedMsgTypes:          cfg.Server.AllowedMsgTypes,
+		ChainID:                  cfg.ChainID,
+		CheckpointGuardStatePath: cfg.CheckpointGuardStatePath(),
+		EnabledRPCs:              enabledRPCs,
+		EnableReflection:         cfg.Server.EnableReflection,
 	})
+	if err != nil {
+		return fmt.Errorf("build gRPC server: %w", err)
+	}
 	healthChecker := health.New(s, logger, cfg.Server.HealthAddr)
 
 	// Log startup confirms config loaded correctly before we start serving.
