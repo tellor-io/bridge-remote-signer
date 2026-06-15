@@ -120,9 +120,11 @@ func (l *Logger) AuditShutdown() {
 	l.log.Info("bridge-signer shutting down", "event", "shutdown")
 }
 
-// AuditConnection logs an incoming client connection.
+// AuditConnection logs an incoming client connection at debug level: these are
+// high-volume / noisy at info; the signing events (AuditSign etc.) are the ones
+// worth surfacing at info.
 func (l *Logger) AuditConnection(remoteAddr string) {
-	l.log.Info("client connected",
+	l.log.Debug("client connected",
 		"event", "connection",
 		"remote_addr", remoteAddr,
 	)
