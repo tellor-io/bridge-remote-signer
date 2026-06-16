@@ -34,7 +34,7 @@ func TestFileSigner_SignAndRecover(t *testing.T) {
 
 	keyringDir, pwFile := writeKeyringWithKey(t, testPrivKeyHex, testKeyName)
 
-	signer, err := NewFileSigner(keyringDir, testKeyName, pwFile)
+	signer, err := NewFileSigner(keyringDir, testKeyName, pwFile, "")
 	requireNoError(t, err, "NewFileSigner failed")
 
 	msg := []byte("TellorLayer: Initial bridge signature A for operator tellorvaloper1test")
@@ -82,7 +82,7 @@ func TestFileSigner_SignAndRecover(t *testing.T) {
 func TestFileSigner_SignRaw(t *testing.T) {
 	keyringDir, pwFile := writeKeyringWithKey(t, testPrivKeyHex, testKeyName)
 
-	signer, err := NewFileSigner(keyringDir, testKeyName, pwFile)
+	signer, err := NewFileSigner(keyringDir, testKeyName, pwFile, "")
 	requireNoError(t, err, "NewFileSigner failed")
 
 	// Use a fixed 32-byte hash.
@@ -123,7 +123,7 @@ func TestFileSigner_SignRaw(t *testing.T) {
 func TestFileSigner_SignRaw_WrongLength(t *testing.T) {
 	keyringDir, pwFile := writeKeyringWithKey(t, testPrivKeyHex, testKeyName)
 
-	signer, err := NewFileSigner(keyringDir, testKeyName, pwFile)
+	signer, err := NewFileSigner(keyringDir, testKeyName, pwFile, "")
 	requireNoError(t, err, "NewFileSigner failed")
 
 	_, err = signer.SignRaw(context.Background(), []byte("too short"))
