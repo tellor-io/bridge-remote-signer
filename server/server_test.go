@@ -37,17 +37,17 @@ const (
 	goldenPrivKeyHex = "1111111111111111111111111111111111111111111111111111111111111111"
 
 	// --- SignOracleAttestation golden vector (from the real node encoder) ---
-	goldenAttestationQueryIDHex      = "83245f6a6a2f6458558a706270fbcc35ac3a81917602c1313d3bfa998dcc2d4b"
-	goldenAttestationValueHex        = "0000000000000000000000000000000000000000000000000de0b6b3a7640000"
-	goldenAttestationCheckpointHex   = "5c3d8e1f0a9b7c6d4e2f1a0b9c8d7e6f5a4b3c2d1e0f9a8b7c6d5e4f3a2b1c0d"
-	goldenAttestationSnapshotHex     = "800969391dde8f3dfb8b76d4d5637b51f5b23ebb26721fc933a7b5cb6fd82124"
-	goldenAttestationSig64Hex        = "65b243409f43168a75a5c3184dcd09f5a8f7becbefbe9f5d4f24dc32d3e6feb41f49088031676890cc6badae9d0f00275955049fc13136db00b639eec7a1da9c"
-	goldenAttTimestamp        uint64 = 1700000000000
-	goldenAttAggregatePower   uint64 = 175
-	goldenAttPreviousTime     uint64 = 1699999000000
-	goldenAttNextTime         uint64 = 1700001000000
-	goldenAttAttestationTime  uint64 = 1700000500000
-	goldenAttLastConsensus    uint64 = 1699998000000
+	goldenAttestationQueryIDHex           = "83245f6a6a2f6458558a706270fbcc35ac3a81917602c1313d3bfa998dcc2d4b"
+	goldenAttestationValueHex             = "0000000000000000000000000000000000000000000000000de0b6b3a7640000"
+	goldenAttestationCheckpointHex        = "5c3d8e1f0a9b7c6d4e2f1a0b9c8d7e6f5a4b3c2d1e0f9a8b7c6d5e4f3a2b1c0d"
+	goldenAttestationSnapshotHex          = "800969391dde8f3dfb8b76d4d5637b51f5b23ebb26721fc933a7b5cb6fd82124"
+	goldenAttestationSig64Hex             = "65b243409f43168a75a5c3184dcd09f5a8f7becbefbe9f5d4f24dc32d3e6feb41f49088031676890cc6badae9d0f00275955049fc13136db00b639eec7a1da9c"
+	goldenAttTimestamp             uint64 = 1700000000000
+	goldenAttAggregatePower        uint64 = 175
+	goldenAttPreviousTime          uint64 = 1699999000000
+	goldenAttNextTime              uint64 = 1700001000000
+	goldenAttAttestationTime       uint64 = 1700000500000
+	goldenAttLastConsensus         uint64 = 1699998000000
 )
 
 // goldenAttestationRequest builds the SignOracleAttestation request from the
@@ -102,7 +102,7 @@ func startTestServerAllow(t *testing.T, allow []string) (signerv1.BridgeSignerCl
 	t.Helper()
 
 	keyringDir, pwFile := writeKeyringWithKey(t, goldenPrivKeyHex, "test-key")
-	s, err := signer.NewFileSigner(keyringDir, "test-key", pwFile, "")
+	s, err := signer.NewFileSigner(keyringDir, "test-key", pwFile)
 	if err != nil {
 		t.Fatalf("NewFileSigner: %v", err)
 	}
@@ -333,14 +333,31 @@ func TestServer_SignTx_BlockedMsg(t *testing.T) {
 	client, cleanup := startTestServer(t)
 	defer cleanup()
 
-	// MsgUndelegate is NOT on the allowlist — must be rejected.
-	signDoc := buildSignDoc(t, "/cosmos.staking.v1beta1.MsgUndelegate")
-	_, err := client.SignTx(context.Background(), &signerv1.SignTxRequest{
-		SignDoc:   signDoc,
-		RequestId: "test-blocked",
-	})
-	if status.Code(err) != codes.PermissionDenied {
-		t.Fatalf("expected PermissionDenied, got %v (err=%v)", status.Code(err), err)
+	// None of these are on the allowlist — every dangerous type must be rejected:
+	// fund transfers, the bridge withdraw, staking, distribution, governance, authz.
+	for _, typeURL := range []string{
+		"/cosmos.bank.v1beta1.MsgSend",
+		"/cosmos.bank.v1beta1.MsgMultiSend",
+		"/ibc.applications.transfer.v1.MsgTransfer",
+		"/layer.bridge.MsgWithdrawTokens",
+		"/cosmos.staking.v1beta1.MsgDelegate",
+		"/cosmos.staking.v1beta1.MsgUndelegate",
+		"/cosmos.staking.v1beta1.MsgBeginRedelegate",
+		"/cosmos.distribution.v1beta1.MsgWithdrawDelegatorReward",
+		"/cosmos.distribution.v1beta1.MsgWithdrawValidatorCommission",
+		"/cosmos.gov.v1.MsgVote",
+		"/cosmos.authz.v1beta1.MsgExec",
+	} {
+		t.Run(typeURL, func(t *testing.T) {
+			signDoc := buildSignDoc(t, typeURL)
+			_, err := client.SignTx(context.Background(), &signerv1.SignTxRequest{
+				SignDoc:   signDoc,
+				RequestId: "test-blocked",
+			})
+			if status.Code(err) != codes.PermissionDenied {
+				t.Fatalf("expected PermissionDenied for %s, got %v (err=%v)", typeURL, status.Code(err), err)
+			}
+		})
 	}
 }
 
@@ -422,7 +439,7 @@ func startTestServerChainID(t *testing.T, chainID string) (signerv1.BridgeSigner
 	t.Helper()
 
 	keyringDir, pwFile := writeKeyringWithKey(t, goldenPrivKeyHex, "test-key")
-	s, err := signer.NewFileSigner(keyringDir, "test-key", pwFile, "")
+	s, err := signer.NewFileSigner(keyringDir, "test-key", pwFile)
 	if err != nil {
 		t.Fatalf("NewFileSigner: %v", err)
 	}

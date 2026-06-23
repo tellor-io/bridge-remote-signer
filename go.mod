@@ -6,7 +6,6 @@ require (
 	github.com/cometbft/cometbft v0.39.1
 	github.com/cosmos/cosmos-sdk v0.54.2
 	github.com/cosmos/gogoproto v1.7.2
-	github.com/cryptoriums/layer-packages v0.0.0-20260509125007-00c782be5fe8
 	github.com/ethereum/go-ethereum v1.17.1
 	github.com/fortanix/sdkms-client-go v0.4.1
 	github.com/prometheus/client_golang v1.23.2
