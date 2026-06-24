@@ -46,7 +46,7 @@ func TestRealSocket_PrivvalHandshake_V038(t *testing.T) {
 	connKey := ed25519.GenPrivKey()
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	go RunDialClient(ctx, rawLn.Addr().String(), chainID, connKey, lpv, handler, logger)
+	go RunDialClient(ctx, rawLn.Addr().String(), chainID, connKey, lpv, handler, nil, logger)
 
 	// Start the node endpoint — completes the SecretConnection handshake with the
 	// dialing signer. A protocol mismatch fails here.

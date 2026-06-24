@@ -28,10 +28,43 @@ func RunDialClient(
 	connPrivKey crypto.PrivKey,
 	pv types.PrivValidator,
 	handler privval.ValidationRequestHandlerFunc,
+	arbiter *PrimaryArbiter,
 	logger log.Logger,
 ) {
+	// When a primary arbiter is configured, only the elected node's sign
+	// requests are honored (active-passive); others are refused without signing.
+	if arbiter != nil {
+		handler = gatedHandler(arbiter, targetAddr, handler)
+	}
 	dialer := privval.DialTCPFn(targetAddr, 8*time.Second, connPrivKey)
 	runDialClient(ctx, dialer, chainID, pv, handler, logger.With("remote", targetAddr))
+}
+
+// notPrimaryResponse builds the refusal a non-primary node receives for a sign
+// request. For non-sign requests (pubkey, ping) it returns (_, false) so they
+// always pass through.
+func notPrimaryResponse(req privvalproto.Message) (privvalproto.Message, bool) {
+	switch req.Sum.(type) {
+	case *privvalproto.Message_SignVoteRequest:
+		return wrapMsg(&privvalproto.SignedVoteResponse{Error: remoteErr("not the primary signer")}), true
+	case *privvalproto.Message_SignProposalRequest:
+		return wrapMsg(&privvalproto.SignedProposalResponse{Error: remoteErr("not the primary signer")}), true
+	default:
+		return privvalproto.Message{}, false
+	}
+}
+
+// gatedHandler wraps a validation handler so that vote/proposal requests are only
+// signed when id is the primary signer (per the arbiter); otherwise it returns a
+// "not the primary signer" error without signing. Pubkey/ping requests pass
+// through unconditionally so the connection stays healthy.
+func gatedHandler(arbiter *PrimaryArbiter, id string, next privval.ValidationRequestHandlerFunc) privval.ValidationRequestHandlerFunc {
+	return func(pv types.PrivValidator, req privvalproto.Message, chainID string) (privvalproto.Message, error) {
+		if refusal, isSign := notPrimaryResponse(req); isSign && !arbiter.Acquire(id) {
+			return refusal, nil
+		}
+		return next(pv, req, chainID)
+	}
 }
 
 // runDialClient is the internal implementation that accepts an injectable dial

@@ -728,7 +728,7 @@ func TestRunDialClient_TCPFullCycle(t *testing.T) {
 	defer cancel()
 
 	// RunDialClient is the public entry-point used in production cmd_start.go.
-	go RunDialClient(ctx, "tcp://"+tcpL.Addr().String(), chainID, ed25519.GenPrivKey(), lpv, handler, nopLog())
+	go RunDialClient(ctx, "tcp://"+tcpL.Addr().String(), chainID, ed25519.GenPrivKey(), lpv, handler, nil, nopLog())
 
 	connCh := make(chan net.Conn, 1)
 	go func() {
