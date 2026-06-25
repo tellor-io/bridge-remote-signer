@@ -107,7 +107,7 @@ func startTestServerAllow(t *testing.T, allow []string) (signerv1.BridgeSignerCl
 	t.Helper()
 
 	keyringDir, pwFile := writeKeyringWithKey(t, goldenPrivKeyHex, "test-key")
-	s, err := signer.NewFileSigner(keyringDir, "test-key", pwFile, "")
+	s, err := signer.NewFileSigner(keyringDir, "test-key", pwFile)
 	if err != nil {
 		t.Fatalf("NewFileSigner: %v", err)
 	}
@@ -339,14 +339,31 @@ func TestServer_SignTx_BlockedMsg(t *testing.T) {
 	client, cleanup := startTestServer(t)
 	defer cleanup()
 
-	// MsgUndelegate is NOT on the allowlist — must be rejected.
-	signDoc := buildSignDoc(t, "/cosmos.staking.v1beta1.MsgUndelegate")
-	_, err := client.SignTx(context.Background(), &signerv1.SignTxRequest{
-		SignDoc:   signDoc,
-		RequestId: "test-blocked",
-	})
-	if status.Code(err) != codes.PermissionDenied {
-		t.Fatalf("expected PermissionDenied, got %v (err=%v)", status.Code(err), err)
+	// None of these are on the allowlist — every dangerous type must be rejected:
+	// fund transfers, the bridge withdraw, staking, distribution, governance, authz.
+	for _, typeURL := range []string{
+		"/cosmos.bank.v1beta1.MsgSend",
+		"/cosmos.bank.v1beta1.MsgMultiSend",
+		"/ibc.applications.transfer.v1.MsgTransfer",
+		"/layer.bridge.MsgWithdrawTokens",
+		"/cosmos.staking.v1beta1.MsgDelegate",
+		"/cosmos.staking.v1beta1.MsgUndelegate",
+		"/cosmos.staking.v1beta1.MsgBeginRedelegate",
+		"/cosmos.distribution.v1beta1.MsgWithdrawDelegatorReward",
+		"/cosmos.distribution.v1beta1.MsgWithdrawValidatorCommission",
+		"/cosmos.gov.v1.MsgVote",
+		"/cosmos.authz.v1beta1.MsgExec",
+	} {
+		t.Run(typeURL, func(t *testing.T) {
+			signDoc := buildSignDoc(t, typeURL)
+			_, err := client.SignTx(context.Background(), &signerv1.SignTxRequest{
+				SignDoc:   signDoc,
+				RequestId: "test-blocked",
+			})
+			if status.Code(err) != codes.PermissionDenied {
+				t.Fatalf("expected PermissionDenied for %s, got %v (err=%v)", typeURL, status.Code(err), err)
+			}
+		})
 	}
 }
 
@@ -430,7 +447,7 @@ func startTestServerChainID(t *testing.T, chainID string) (signerv1.BridgeSigner
 	t.Helper()
 
 	keyringDir, pwFile := writeKeyringWithKey(t, goldenPrivKeyHex, "test-key")
-	s, err := signer.NewFileSigner(keyringDir, "test-key", pwFile, "")
+	s, err := signer.NewFileSigner(keyringDir, "test-key", pwFile)
 	if err != nil {
 		t.Fatalf("NewFileSigner: %v", err)
 	}
