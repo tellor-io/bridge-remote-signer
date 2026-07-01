@@ -70,6 +70,7 @@ func newRootCmd() *cobra.Command {
 	rootCmd.AddCommand(
 		keysCmd,
 		startCmd(),
+		initStateCmd(),
 	)
 
 	return rootCmd
@@ -109,10 +110,11 @@ delete to remove, export to dump the raw hex private key to a
 	return cmd
 }
 
-// needsKeyringDir reports whether cmd touches the cosmos-sdk keyring.
+// needsKeyringDir reports whether cmd touches the cosmos-sdk keyring. The daemon (start)
+// and the state-file bootstrap (init-state) do not.
 func needsKeyringDir(cmd *cobra.Command) bool {
 	for c := cmd; c != nil; c = c.Parent() {
-		if c.Name() == "start" {
+		if c.Name() == "start" || c.Name() == "init-state" {
 			return false
 		}
 	}

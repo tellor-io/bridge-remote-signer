@@ -37,16 +37,14 @@ func startCmd() *cobra.Command {
 		Args:  cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, _ []string) error {
 			configPath, _ := cmd.Flags().GetString("config")
-			initState, _ := cmd.Flags().GetBool("init")
-			return runDaemon(configPath, initState)
+			return runDaemon(configPath)
 		},
 	}
 	cmd.Flags().String("config", "config.yaml", "path to config file")
-	cmd.Flags().Bool("init", false, "create a fresh consensus state file on first start; refuses if one already exists")
 	return cmd
 }
 
-func runDaemon(configPath string, initState bool) error {
+func runDaemon(configPath string) error {
 	cfg, err := config.Load(configPath)
 	if err != nil {
 		return fmt.Errorf("load config: %w", err)
@@ -119,10 +117,10 @@ func runDaemon(configPath string, initState bool) error {
 		if err != nil {
 			return fmt.Errorf("load consensus connection key: %w", err)
 		}
-		// Guard against a missing/deleted/un-mounted state file silently
-		// fresh-starting the signer (double-sign risk). --init creates a fresh
-		// state file, but only when one does not already exist.
-		if err := consensus.EnsureStateFile(cfg.Consensus.StateFile, initState); err != nil {
+		// Fail closed if the state file is missing/deleted/un-mounted rather than
+		// silently fresh-starting the signer (double-sign risk). start never creates
+		// the state file; bootstrap a new signer once with the 'init-state' command.
+		if err := consensus.RequireStateFile(cfg.Consensus.StateFile); err != nil {
 			return fmt.Errorf("consensus: %w", err)
 		}
 		filePV, err := consensus.LoadCometFilePV(cfg.Consensus.KeyFile, cfg.Consensus.StateFile)
