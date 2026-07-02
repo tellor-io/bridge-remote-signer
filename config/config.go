@@ -38,11 +38,34 @@ type ConsensusConfig struct {
 	StateFile   string `yaml:"state_file"`
 	ConnKeyFile string `yaml:"conn_key_file"`
 	Targets     string `yaml:"targets"`
+
+	// PrimaryFailoverTimeout enables active-passive consensus signing when set
+	// (e.g. "60s"): only one node (the primary) is signed for at a time, and if
+	// it sends no sign request for this long another node may take over. Empty
+	// keeps the active-active behavior (every node signed, relying on the
+	// priv_validator_state guard to prevent double-signs).
+	PrimaryFailoverTimeout string `yaml:"primary_failover_timeout"`
 }
 
 // Enabled returns true when consensus signing is configured.
 func (c *ConsensusConfig) Enabled() bool {
 	return c.KeyFile != ""
+}
+
+// FailoverTimeout parses PrimaryFailoverTimeout. An empty value returns 0, which
+// disables the primary election (active-active signing).
+func (c *ConsensusConfig) FailoverTimeout() (time.Duration, error) {
+	if c.PrimaryFailoverTimeout == "" {
+		return 0, nil
+	}
+	d, err := time.ParseDuration(c.PrimaryFailoverTimeout)
+	if err != nil {
+		return 0, fmt.Errorf("consensus.primary_failover_timeout %q: %w", c.PrimaryFailoverTimeout, err)
+	}
+	if d <= 0 {
+		return 0, fmt.Errorf("consensus.primary_failover_timeout must be positive, got %q", c.PrimaryFailoverTimeout)
+	}
+	return d, nil
 }
 
 // SignerConfig controls which backend holds the private key.
@@ -313,6 +336,9 @@ func (c *Config) validate() error {
 		}
 		if c.Consensus.Targets == "" {
 			return errors.New("consensus.targets is required")
+		}
+		if _, err := c.Consensus.FailoverTimeout(); err != nil {
+			return err
 		}
 	}
 

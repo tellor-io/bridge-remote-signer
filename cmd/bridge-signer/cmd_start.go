@@ -134,6 +134,19 @@ func runDaemon(configPath string) error {
 		}
 		handler := consensus.ValidationRequestHandler(valAddr)
 
+		// Optional active-passive primary election: when a failover timeout is
+		// configured, only the elected node is signed for; others are refused
+		// until the primary goes idle. Empty config => active-active (arbiter nil).
+		var arbiter *consensus.PrimaryArbiter
+		failoverTimeout, err := cfg.Consensus.FailoverTimeout()
+		if err != nil {
+			return fmt.Errorf("consensus: %w", err)
+		}
+		if failoverTimeout > 0 {
+			arbiter = consensus.NewPrimaryArbiter(failoverTimeout, cometLogger)
+			logger.Info("consensus primary election enabled (active-passive)", "failover_timeout", failoverTimeout.String())
+		}
+
 		for _, raw := range strings.Split(cfg.Consensus.Targets, ",") {
 			target := strings.TrimSpace(raw)
 			if target == "" {
@@ -142,7 +155,7 @@ func runDaemon(configPath string) error {
 			consensusWg.Add(1)
 			go func(t string) {
 				defer consensusWg.Done()
-				consensus.RunDialClient(ctx, t, cfg.ChainID, connKey, locked, handler, cometLogger)
+				consensus.RunDialClient(ctx, t, cfg.ChainID, connKey, locked, handler, arbiter, cometLogger)
 			}(target)
 		}
 		logger.Info("consensus signer started",
