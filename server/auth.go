@@ -17,6 +17,7 @@ const (
 	MethodSignTx                = signerv1.BridgeSigner_SignTx_FullMethodName
 	MethodSignBridgeCheckpoint  = signerv1.BridgeSigner_SignBridgeCheckpoint_FullMethodName
 	MethodSignOracleAttestation = signerv1.BridgeSigner_SignOracleAttestation_FullMethodName
+	MethodSignInitial           = signerv1.BridgeSigner_SignInitial_FullMethodName
 )
 
 // shortRPCNameToFullMethod maps the short, config-friendly RPC names to their
@@ -26,6 +27,7 @@ var shortRPCNameToFullMethod = map[string]string{
 	"sign_tx":                 signerv1.BridgeSigner_SignTx_FullMethodName,
 	"sign_bridge_checkpoint":  signerv1.BridgeSigner_SignBridgeCheckpoint_FullMethodName,
 	"sign_oracle_attestation": signerv1.BridgeSigner_SignOracleAttestation_FullMethodName,
+	"sign_initial":            signerv1.BridgeSigner_SignInitial_FullMethodName,
 	"sign":                    signerv1.BridgeSigner_Sign_FullMethodName,
 	"get_public_key":          signerv1.BridgeSigner_GetPublicKey_FullMethodName,
 	"get_address":             signerv1.BridgeSigner_GetAddress_FullMethodName,

@@ -45,6 +45,12 @@ type Server struct {
 	// validator set it is not a member of).
 	selfEVMAddr common.Address
 
+	// selfCosmosAddr is the signer's own 20-byte Cosmos account address, derived
+	// from the same public key at construction. Used by SignInitial to assert the
+	// requested operator address belongs to this signer. Comparing account bytes
+	// is prefix-independent, so it matches whatever valoper prefix the node used.
+	selfCosmosAddr []byte
+
 	// checkpointGuard enforces a monotonic replay guard on the bridge
 	// checkpoint validator_timestamp.
 	checkpointGuard *checkpointReplayGuard
@@ -97,6 +103,8 @@ func New(s signer.Signer, logger *logging.Logger, cfg Config) (*Server, error) {
 	}
 	selfEVMAddr := crypto.PubkeyToAddress(*ecdsaPub)
 
+	selfCosmosAddr := (&cosmossecp.PubKey{Key: pubKey}).Address().Bytes()
+
 	guard, err := newCheckpointReplayGuard(cfg.CheckpointGuardStatePath)
 	if err != nil {
 		return nil, fmt.Errorf("init checkpoint replay guard: %w", err)
@@ -141,6 +149,7 @@ func New(s signer.Signer, logger *logging.Logger, cfg Config) (*Server, error) {
 		allowedMsgTypes: allowed,
 		chainID:         cfg.ChainID,
 		selfEVMAddr:     selfEVMAddr,
+		selfCosmosAddr:  selfCosmosAddr,
 		checkpointGuard: guard,
 		enabledRPCs:     enabled,
 	}
@@ -262,6 +271,56 @@ func (s *Server) GetChainID(_ context.Context, _ *signerv1.GetChainIDRequest) (*
 		return nil, status.Errorf(codes.FailedPrecondition, "chain ID is not configured on the signer")
 	}
 	return &signerv1.GetChainIDResponse{ChainId: s.chainID}, nil
+}
+
+// SignInitial implements BridgeSignerServer. It produces the two one-time
+// validator EVM-key registration signatures without accepting a message to
+// sign: the signer rebuilds the fixed registration messages from the operator
+// address (first asserts it derives from its own key) and signs sha256(sha256(message))
+// for each.
+func (s *Server) SignInitial(ctx context.Context, req *signerv1.SignInitialRequest) (*signerv1.SignInitialResponse, error) {
+	if req.OperatorAddress == "" {
+		return nil, status.Errorf(codes.InvalidArgument, "operator_address must not be empty")
+	}
+
+	_, addrBytes, err := bech32.DecodeAndConvert(req.OperatorAddress)
+	if err != nil {
+		return nil, status.Errorf(codes.InvalidArgument, "invalid operator_address: %v", err)
+	}
+	if !bytes.Equal(addrBytes, s.selfCosmosAddr) {
+		s.logger.Error("SignInitial rejected: operator_address does not match signer key",
+			"request_id", req.RequestId,
+			"operator_address", req.OperatorAddress,
+		)
+		return nil, status.Errorf(codes.PermissionDenied, "operator_address does not derive from the signer key")
+	}
+
+	msgA, msgB := initialRegistrationMessages(req.OperatorAddress)
+	digestA := initialSigningDigest(msgA)
+	digestB := initialSigningDigest(msgB)
+
+	sigA, err := s.signer.SignRaw(ctx, digestA[:])
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "signing A failed: %v", err)
+	}
+	if len(sigA) != 64 {
+		return nil, status.Errorf(codes.Internal, "invalid signature A length %d, expected 64", len(sigA))
+	}
+	sigB, err := s.signer.SignRaw(ctx, digestB[:])
+	if err != nil {
+		return nil, status.Errorf(codes.Internal, "signing B failed: %v", err)
+	}
+	if len(sigB) != 64 {
+		return nil, status.Errorf(codes.Internal, "invalid signature B length %d, expected 64", len(sigB))
+	}
+
+	s.logger.Info("SignInitial completed",
+		"event", "sign_initial",
+		"request_id", req.RequestId,
+		"operator_address", req.OperatorAddress,
+		"success", true,
+	)
+	return &signerv1.SignInitialResponse{SignatureA: sigA, SignatureB: sigB}, nil
 }
 
 // SignTx implements BridgeSignerServer.

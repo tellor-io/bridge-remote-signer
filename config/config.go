@@ -148,6 +148,7 @@ var knownRPCShortNames = map[string]struct{}{
 	"sign_tx":                 {},
 	"sign_bridge_checkpoint":  {},
 	"sign_oracle_attestation": {},
+	"sign_initial":            {},
 	"get_public_key":          {},
 	"get_address":             {},
 	"get_chain_id":            {},

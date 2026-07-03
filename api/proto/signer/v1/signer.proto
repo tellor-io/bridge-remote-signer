@@ -56,6 +56,12 @@ service BridgeSigner {
   // consumer brute-forces the recovery id itself. FAILS CLOSED (signs nothing)
   // on any mismatch.
   rpc SignOracleAttestation(SignOracleAttestationRequest) returns (SignOracleAttestationResponse);
+
+  // SignInitial produces the one-time validator EVM-key registration
+  // signatures. It does NOT accept a message to sign: the signer rebuilds the
+  // two fixed registration messages itself from its own operator address, 
+  // then signs sha256(sha256(message)).
+  rpc SignInitial(SignInitialRequest) returns (SignInitialResponse);
 }
 
 // SignRequest is the signing request sent by the validator.
@@ -259,4 +265,23 @@ message SignOracleAttestationResponse {
   // snapshot is the 32-byte keccak256 attestation snapshot the signer recomputed
   // and signed (equals expected_snapshot on success).
   bytes snapshot = 2;
+}
+
+// SignInitialRequest carries the operator (valoper) address the two one-time
+// registration messages are built for.
+message SignInitialRequest {
+  // operator_address is the bech32 validator operator address.
+  string operator_address = 1;
+
+  // request_id is an optional caller-assigned identifier for logs.
+  string request_id = 2;
+}
+
+// SignInitialResponse contains the two registration signatures.
+message SignInitialResponse {
+  // sha256(sha256("TellorLayer: Initial bridge signature A for operator <op>")).
+  bytes signature_a = 1;
+
+  // sha256(sha256("TellorLayer: Initial bridge signature B for operator <op>")).
+  bytes signature_b = 2;
 }
