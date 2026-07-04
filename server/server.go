@@ -449,6 +449,7 @@ func (s *Server) SignBridgeCheckpoint(ctx context.Context, req *signerv1.SignBri
 	s.logger.Info("SignBridgeCheckpoint completed",
 		"event", "sign_bridge_checkpoint",
 		"request_id", req.RequestId,
+		"remote_addr", peerAddr(ctx),
 		"chain_id", req.ChainId,
 		"block_height", req.BlockHeight,
 		"checkpoint_index", req.CheckpointIndex,
@@ -530,6 +531,7 @@ func (s *Server) SignOracleAttestation(ctx context.Context, req *signerv1.SignOr
 	s.logger.Info("SignOracleAttestation completed",
 		"event", "sign_oracle_attestation",
 		"request_id", req.RequestId,
+		"remote_addr", peerAddr(ctx),
 		"timestamp", req.Timestamp,
 		"aggregate_power", req.AggregatePower,
 		"snapshot", hex.EncodeToString(snapshot),
@@ -544,6 +546,16 @@ func (s *Server) SignOracleAttestation(ctx context.Context, req *signerv1.SignOr
 
 // enforces a per-request timeout
 // recovers from panics in the handler (prevents a bad request from crashing the sidecar)
+// peerAddr returns the remote peer address from ctx, or "unknown" if absent.
+// Included in the sign-completion logs so an operator can see which node's
+// request was signed during active-passive failover without enabling debug.
+func peerAddr(ctx context.Context) string {
+	if p, ok := peer.FromContext(ctx); ok && p.Addr != nil {
+		return p.Addr.String()
+	}
+	return "unknown"
+}
+
 // logs the remote peer address for each connection
 func newUnaryInterceptor(logger *logging.Logger, timeout time.Duration) grpc.UnaryServerInterceptor {
 	return func(
