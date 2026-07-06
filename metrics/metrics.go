@@ -27,13 +27,30 @@ var (
 		Help: "1 for the node IP whose signature was most recently accepted, 0 for others.",
 	}, []string{"ip"})
 
-	mu    sync.Mutex
-	seen  = map[string]struct{}{}
+	// targetConnected is 1 while the signer holds a live privval connection to a target
+	// listed in its config, 0 while it is disconnected/retrying. Alert on it staying 0.
+	targetConnected = prometheus.NewGaugeVec(prometheus.GaugeOpts{
+		Name: "signer_target_connected",
+		Help: "1 while the signer has a live privval connection to a configured target, 0 otherwise.",
+	}, []string{"target"})
+
+	mu   sync.Mutex
+	seen = map[string]struct{}{}
 )
 
 func init() {
 	up.Set(1)
-	Registry.MustRegister(up, activeNode)
+	Registry.MustRegister(up, activeNode, targetConnected)
+}
+
+// SetTargetConnected records whether the signer currently has a live privval connection to
+// the given config target (true on connect, false on dial failure or disconnect).
+func SetTargetConnected(target string, connected bool) {
+	v := 0.0
+	if connected {
+		v = 1.0
+	}
+	targetConnected.WithLabelValues(target).Set(v)
 }
 
 // RecordSign marks the given peer address's IP as the current signing node: its gauge

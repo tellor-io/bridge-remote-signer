@@ -12,6 +12,8 @@ import (
 	"github.com/cometbft/cometbft/privval"
 	privvalproto "github.com/cometbft/cometbft/proto/tendermint/privval"
 	"github.com/cometbft/cometbft/types"
+
+	"github.com/tellor-io/bridge-remote-signer/metrics"
 )
 
 // MaxRemoteSignerMsgSize is the max decoded privval frame (CometBFT default).
@@ -37,7 +39,9 @@ func RunDialClient(
 		handler = gatedHandler(arbiter, targetAddr, handler)
 	}
 	dialer := privval.DialTCPFn(targetAddr, 8*time.Second, connPrivKey)
-	runDialClient(ctx, dialer, chainID, pv, handler, logger.With("remote", targetAddr))
+	metrics.SetTargetConnected(targetAddr, false) // start disconnected until the first dial succeeds
+	runDialClient(ctx, dialer, chainID, pv, handler, logger.With("remote", targetAddr),
+		func(connected bool) { metrics.SetTargetConnected(targetAddr, connected) })
 }
 
 // notPrimaryResponse builds the refusal a non-primary node receives for a sign
@@ -76,7 +80,11 @@ func runDialClient(
 	pv types.PrivValidator,
 	handler privval.ValidationRequestHandlerFunc,
 	logger log.Logger,
+	onState func(connected bool),
 ) {
+	if onState == nil {
+		onState = func(bool) {}
+	}
 	const (
 		minBackoff = time.Second
 		maxBackoff = 5 * time.Second
@@ -92,6 +100,7 @@ func runDialClient(
 
 		conn, err := dialFn()
 		if err != nil {
+			onState(false)
 			logger.Error("privval dial failed", "err", err)
 			select {
 			case <-ctx.Done():
@@ -108,9 +117,11 @@ func runDialClient(
 		}
 
 		logger.Info("privval connected")
+		onState(true)
 		backoff = minBackoff // reset on successful connection
 		serveConn(ctx, conn, chainID, pv, handler, logger)
 		_ = conn.Close()
+		onState(false)
 		logger.Info("privval connection closed, reconnecting")
 
 		select {
