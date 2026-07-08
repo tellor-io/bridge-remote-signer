@@ -276,8 +276,18 @@ serves:
 
 - `GET /healthz` — liveness: process is alive
 - `GET /readyz` — readiness: signing backend can serve the public key
-- `GET /metrics` — Prometheus; exposes a single `up` gauge so a scraper can
-  alert on the signer being down
+- `GET /metrics` — Prometheus:
+  - `up` — always 1 while serving, so a scraper can alert on the signer
+    being down
+  - `signer_active_node{ip="..."}` — 1 for the node whose signature was most
+    recently accepted, 0 for the others; a flip means the signing node
+    switched (failover)
+  - `signer_target_connected{target="..."}` — 1 while the signer holds a live
+    privval connection to that configured consensus target; alert on 0 for
+    disconnects
+
+Sign-completion logs also include the requesting node's address as
+`remote_addr`, so the active node is visible at info level.
 
 ## Validator configuration
 
