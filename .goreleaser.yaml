@@ -1,0 +1,35 @@
+version: 2
+
+project_name: bridge-signer
+
+builds:
+  - main: ./cmd/bridge-signer
+    binary: bridge-signer
+    env:
+      - CGO_ENABLED=0
+    flags:
+      - -trimpath
+    ldflags:
+      - -s -w
+    # No windows: the signer relies on POSIX file modes for key secrecy and
+    # refuses to build there (see cmd/bridge-signer/main.go).
+    goos:
+      - linux
+      - darwin
+    goarch:
+      - amd64
+      - arm64
+
+archives:
+  - formats: [tar.gz]
+
+checksum:
+  name_template: checksums.txt
+
+release:
+  # Draft so a human reviews the artifacts before publishing — validators
+  # install this binary to custody keys.
+  draft: true
+
+changelog:
+  use: github

@@ -1,9 +1,9 @@
 module github.com/tellor-io/bridge-remote-signer
 
-go 1.25.9
+go 1.25.11
 
 require (
-	github.com/cometbft/cometbft v0.38.17
+	github.com/cometbft/cometbft v0.38.21
 	github.com/cosmos/cosmos-sdk v0.53.4
 	github.com/cosmos/gogoproto v1.7.2
 	github.com/ethereum/go-ethereum v1.17.1
@@ -167,11 +167,13 @@ replace github.com/gogo/protobuf => github.com/regen-network/protobuf v1.3.3-alp
 
 replace github.com/syndtr/goleveldb => github.com/syndtr/goleveldb v1.0.1-0.20210819022825-2ae1ddf74ef7
 
-replace google.golang.org/grpc => google.golang.org/grpc v1.72.2
+// v1.79.3 is the minimum version fixing GO-2026-4762 (authorization bypass via :path).
+replace google.golang.org/grpc => google.golang.org/grpc v1.79.3
 
 replace google.golang.org/protobuf => google.golang.org/protobuf v1.36.6
 
-replace golang.org/x/net => golang.org/x/net v0.40.0
+// v0.53.0 is the minimum version fixing GO-2026-4918 (HTTP/2 infinite loop).
+replace golang.org/x/net => golang.org/x/net v0.53.0
 
 replace golang.org/x/sys => golang.org/x/sys v0.33.0
 

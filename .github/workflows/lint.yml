@@ -1,4 +1,4 @@
-name: CI
+name: Lint
 
 on:
   push:
@@ -14,7 +14,7 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  build:
+  golangci:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -24,14 +24,7 @@ jobs:
         with:
           go-version-file: go.mod
 
-      - name: go mod tidy check
-        run: |
-          go mod tidy
-          (cd api && go mod tidy)
-          git diff --exit-code go.mod go.sum api/go.mod api/go.sum
-
-      - name: Build
-        run: go build -v ./...
-
-      - name: Test
-        run: go test -race -v ./...
+      - name: golangci-lint
+        uses: golangci/golangci-lint-action@v8
+        with:
+          version: v2.12.2

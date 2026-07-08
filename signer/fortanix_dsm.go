@@ -30,9 +30,9 @@ func newFortanixDSMSignerFromConfig(ctx context.Context, raw map[string]any) (Si
 	if !ok || apiKey == "" {
 		return nil, errors.New("signer.dsm_api_key is required when backend is \"fortanixdsm\"")
 	}
-	keyID, ok := raw["dsm_key_id"].(string)
-	keyName, ok := raw["dsm_key_name"].(string)
-	if !ok || (keyID == "" && keyName == "") {
+	keyID, _ := raw["dsm_key_id"].(string)
+	keyName, _ := raw["dsm_key_name"].(string)
+	if keyID == "" && keyName == "" {
 		return nil, errors.New("signer.dsm_key_id or signer.dsm_key_name is required when backend is \"fortanixdsm\"")
 	}
 

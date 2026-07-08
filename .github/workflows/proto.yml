@@ -1,0 +1,47 @@
+name: Proto
+
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+    branches: ["main"]
+
+permissions:
+  contents: read
+
+jobs:
+  drift:
+    name: generated code up to date
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+
+      - name: Install protoc
+        uses: arduino/setup-protoc@v3
+        with:
+          # protoc 3.21.12 — must match the version recorded in the api/gen
+          # file headers, or regeneration differs with no proto change.
+          version: "21.12"
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+
+      # Pinned to the versions recorded in the generated file headers, NOT
+      # @latest — a new plugin release must not fail this check.
+      - name: Install proto plugins
+        run: |
+          go install google.golang.org/protobuf/cmd/protoc-gen-go@v1.36.11
+          go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@v1.6.2
+
+      - name: Regenerate
+        run: make proto
+
+      - name: Check for drift
+        run: |
+          git diff --exit-code -- api/gen || {
+            echo "::error::api/gen is stale — run 'make proto' (with the pinned plugin versions above) and commit the result"
+            exit 1
+          }
