@@ -117,7 +117,7 @@ func TestNodeFailover(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	go runDialClient(ctx, dialFn, "layertest-5", lpv, handler, nopLog())
+	go runDialClient(ctx, dialFn, "layertest-5", lpv, handler, nopLog(), nil)
 
 	// ── First connection: send PubKeyRequest, verify response ────────────────
 	resp1 := sendReq(t, c1node, pubKeyReq())
@@ -168,7 +168,7 @@ func TestNodeRecovery(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
-	go runDialClient(ctx, dialFn, "layertest-5", lpv, handler, nopLog())
+	go runDialClient(ctx, dialFn, "layertest-5", lpv, handler, nopLog(), nil)
 
 	hash := make([]byte, 32)
 	for i := range hash {
@@ -233,7 +233,7 @@ func TestBothNodesAlive(t *testing.T) {
 	for _, cc := range []net.Conn{node1client, node2client} {
 		c := cc
 		dialFn := func() (net.Conn, error) { return c, nil }
-		go runDialClient(ctx, dialFn, "layertest-5", lpv, handler, nopLog())
+		go runDialClient(ctx, dialFn, "layertest-5", lpv, handler, nopLog(), nil)
 	}
 
 	// Part 1: concurrent PubKey requests from both nodes.
@@ -323,7 +323,7 @@ func TestDoubleSignPrevention(t *testing.T) {
 	for _, cc := range []net.Conn{node1client, node2client} {
 		c := cc
 		dialFn := func() (net.Conn, error) { return c, nil }
-		go runDialClient(ctx, dialFn, "layertest-5", lpv, handler, nopLog())
+		go runDialClient(ctx, dialFn, "layertest-5", lpv, handler, nopLog(), nil)
 	}
 
 	const conflictHeight = int64(300)
