@@ -5,6 +5,7 @@ import (
 	"context"
 	"crypto/sha256"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"net"
 	"time"
@@ -428,11 +429,24 @@ func (s *Server) SignBridgeCheckpoint(ctx context.Context, req *signerv1.SignBri
 
 	// (7) Monotonic replay guard: reject ts <= last persisted, then persist.
 	if err := s.checkpointGuard.CheckAndAdvance(req.ValidatorTimestamp); err != nil {
-		s.logger.Error("SignBridgeCheckpoint rejected: replay guard",
-			"request_id", req.RequestId,
-			"validator_timestamp", req.ValidatorTimestamp,
-			"error", err.Error(),
-		)
+		switch {
+		case errors.Is(err, ErrReplayGuardRejected):
+			// Expected: the same valset checkpoint is resent every block until the valset
+			// changes (a >5% power shift or the ~2-week refresh), so the signer signs it
+			// once and rejects the repeats. Not an error condition — log at debug only.
+			s.logger.Debug("SignBridgeCheckpoint replay guard: repeat checkpoint, not re-signing (expected until the valset changes)",
+				"request_id", req.RequestId,
+				"validator_timestamp", req.ValidatorTimestamp,
+			)
+		default:
+			// The guard could not advance the high-water mark (e.g. a persistence failure).
+			// That is genuinely wrong and should be alarming.
+			s.logger.Error("SignBridgeCheckpoint replay guard failure",
+				"request_id", req.RequestId,
+				"validator_timestamp", req.ValidatorTimestamp,
+				"error", err.Error(),
+			)
+		}
 		return nil, status.Errorf(codes.FailedPrecondition, "replay guard: %v", err)
 	}
 

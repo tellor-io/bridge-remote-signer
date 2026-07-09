@@ -1,6 +1,7 @@
 package server
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -8,6 +9,13 @@ import (
 	"strings"
 	"sync"
 )
+
+// ErrReplayGuardRejected is returned when a checkpoint's validator_timestamp is not
+// greater than the last signed one. This is EXPECTED steady-state behavior: the same
+// valset checkpoint is resent every block until the valset changes (a >5% power shift or
+// the ~2-week refresh), so the signer signs it once and rejects the repeats. Callers
+// should treat this as a normal (debug) event, not an alarming error.
+var ErrReplayGuardRejected = errors.New("checkpoint replay guard rejected")
 
 // checkpointReplayGuard enforces a monotonic high-water mark on the bridge
 // checkpoint validator_timestamp so a replayed (or out-of-order) checkpoint
@@ -57,7 +65,7 @@ func (g *checkpointReplayGuard) CheckAndAdvance(ts uint64) error {
 	defer g.mu.Unlock()
 
 	if g.loaded && ts <= g.highWater {
-		return fmt.Errorf("replay guard: validator_timestamp %d is not greater than last signed %d", ts, g.highWater)
+		return fmt.Errorf("%w: validator_timestamp %d is not greater than last signed %d", ErrReplayGuardRejected, ts, g.highWater)
 	}
 
 	if g.statePath != "" {
