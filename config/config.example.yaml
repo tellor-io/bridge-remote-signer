@@ -43,6 +43,13 @@ server:
     - /cosmos.slashing.v1beta1.MsgUnjail
     - /layer.reporter.MsgUnjailReporter
 
+  # checkpoint_guard_state_file: path persisting the SignBridgeCheckpoint
+  # monotonic replay guard across restarts. Defaults to
+  # bridge_checkpoint_state.json next to consensus.state_file. REQUIRED when
+  # consensus signing is off (a memory-only guard would reset on restart),
+  # unless sign_bridge_checkpoint is disabled below.
+  # checkpoint_guard_state_file: /data/bridge_checkpoint_state.json
+
   # enabled_rpcs: turn RPCs off without a rebuild (value false => Unimplemented).
   # The blind primitives Sign (65-byte) and SignRaw (64-byte) are ALWAYS disabled
   # in code regardless of this map — only the recompute-and-verify operations

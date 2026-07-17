@@ -315,6 +315,15 @@ func (c *Config) validate() error {
 		}
 	}
 
+	// The SignBridgeCheckpoint replay guard must survive restarts: a memory-only
+	// high-water mark silently resets on restart, re-allowing a checkpoint replay
+	// the signer previously refused. Fail closed at config time instead.
+	if v, ok := c.Server.EnabledRPCs["sign_bridge_checkpoint"]; (!ok || v) && c.CheckpointGuardStatePath() == "" {
+		return errors.New("server.checkpoint_guard_state_file is required when SignBridgeCheckpoint is enabled " +
+			"and consensus.state_file is not set (the checkpoint replay guard must survive restarts); " +
+			"set it, or disable the RPC with server.enabled_rpcs: {sign_bridge_checkpoint: false}")
+	}
+
 	// Log
 	switch c.Log.Level {
 	case "debug", "info", "warn", "error":

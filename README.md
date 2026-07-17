@@ -181,7 +181,8 @@ server:
   #   sign_tx: false
 
   # Path backing the SignBridgeCheckpoint replay guard. Defaults to
-  # bridge_checkpoint_state.json next to consensus.state_file.
+  # bridge_checkpoint_state.json next to consensus.state_file; required when
+  # consensus signing is off (unless the RPC is disabled in enabled_rpcs).
   # checkpoint_guard_state_file: /data/bridge_checkpoint_state.json
 
   # gRPC server reflection — lets any client enumerate the signing RPCs.
