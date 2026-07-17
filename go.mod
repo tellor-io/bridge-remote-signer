@@ -1,6 +1,6 @@
 module github.com/tellor-io/bridge-remote-signer
 
-go 1.25.11
+go 1.25.12
 
 require (
 	github.com/cometbft/cometbft v0.38.21
