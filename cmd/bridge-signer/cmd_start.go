@@ -252,7 +252,7 @@ func runDaemon(configPath string) error {
 		}()
 		go func() {
 			defer wg.Done()
-			healthChecker.Stop(shutdownCtx)
+			_ = healthChecker.Stop(shutdownCtx)
 		}()
 		wg.Wait()
 		close(doneCh)

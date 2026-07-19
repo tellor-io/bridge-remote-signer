@@ -22,14 +22,6 @@ import (
 
 // ── helpers ──────────────────────────────────────────────────────────────────
 
-// pipeDialer returns a dial function that produces one end of a net.Pipe(),
-// and the other end (the "node" side) immediately.
-func pipeDialer(t *testing.T) (dialFn func() (net.Conn, error), nodeConn net.Conn) {
-	t.Helper()
-	c1, c2 := net.Pipe()
-	return func() (net.Conn, error) { return c1, nil }, c2
-}
-
 // sendReq writes a privval Message to conn and reads back the response.
 func sendReq(t *testing.T, conn net.Conn, req privvalproto.Message) privvalproto.Message {
 	t.Helper()

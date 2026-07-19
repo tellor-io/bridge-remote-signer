@@ -1,6 +1,6 @@
 module github.com/tellor-io/bridge-remote-signer/api
 
-go 1.23.2
+go 1.24.0
 
 require (
 	google.golang.org/grpc v1.79.3

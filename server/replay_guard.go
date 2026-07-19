@@ -85,18 +85,18 @@ func writeUint64Atomic(path string, v uint64) error {
 		return fmt.Errorf("create temp file: %w", err)
 	}
 	tmpPath := f.Name()
-	defer os.Remove(tmpPath)
+	defer func() { _ = os.Remove(tmpPath) }()
 
 	if _, err := f.WriteString(strconv.FormatUint(v, 10)); err != nil {
-		f.Close()
+		_ = f.Close()
 		return fmt.Errorf("write temp file: %w", err)
 	}
 	if err := f.Chmod(0o600); err != nil {
-		f.Close()
+		_ = f.Close()
 		return fmt.Errorf("chmod temp file: %w", err)
 	}
 	if err := f.Sync(); err != nil {
-		f.Close()
+		_ = f.Close()
 		return fmt.Errorf("fsync temp file: %w", err)
 	}
 	if err := f.Close(); err != nil {
@@ -116,7 +116,7 @@ func syncDirBestEffort(dir string) error {
 	if err != nil {
 		return fmt.Errorf("open dir %q for fsync: %w", dir, err)
 	}
-	defer d.Close()
+	defer func() { _ = d.Close() }()
 	if err := d.Sync(); err != nil {
 		return fmt.Errorf("fsync dir %q: %w", dir, err)
 	}

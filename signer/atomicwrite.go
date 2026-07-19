@@ -24,8 +24,8 @@ func WriteNewFileAtomic(path string, data []byte, perm os.FileMode) error {
 		return fmt.Errorf("create temp file: %w", err)
 	}
 	tmpPath := f.Name()
-	defer os.Remove(tmpPath)
-	defer f.Close()
+	defer func() { _ = os.Remove(tmpPath) }()
+	defer func() { _ = f.Close() }()
 
 	if _, err := f.Write(data); err != nil {
 		return fmt.Errorf("write temp file: %w", err)
@@ -66,7 +66,7 @@ func syncDir(dir string) error {
 	if err != nil {
 		return fmt.Errorf("open dir %q for fsync: %w", dir, err)
 	}
-	defer d.Close()
+	defer func() { _ = d.Close() }()
 	if err := d.Sync(); err != nil {
 		return fmt.Errorf("fsync dir %q: %w", dir, err)
 	}

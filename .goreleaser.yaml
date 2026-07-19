@@ -1,0 +1,29 @@
+version: 2
+
+project_name: bridge-signer
+
+builds:
+  - main: ./cmd/bridge-signer
+    binary: bridge-signer
+    env:
+      - CGO_ENABLED=0
+    flags:
+      - -trimpath
+    ldflags:
+      - -s -w
+    # No windows: refuses to build there (see cmd/bridge-signer/main.go).
+    goos:
+      - linux
+      - darwin
+    goarch:
+      - amd64
+      - arm64
+
+archives:
+  - formats: [tar.gz]
+
+checksum:
+  name_template: checksums.txt
+
+changelog:
+  disable: true

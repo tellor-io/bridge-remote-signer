@@ -82,7 +82,7 @@ func (c *Checker) Stop(ctx context.Context) error {
 // process is alive.
 func (c *Checker) liveness(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
-	fmt.Fprint(w, "ok")
+	_, _ = fmt.Fprint(w, "ok")
 }
 
 // readiness handles GET /readyz
@@ -100,5 +100,5 @@ func (c *Checker) readiness(w http.ResponseWriter, r *http.Request) {
 	}
 
 	w.WriteHeader(http.StatusOK)
-	fmt.Fprint(w, "ok")
+	_, _ = fmt.Fprint(w, "ok")
 }

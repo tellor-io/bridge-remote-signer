@@ -128,10 +128,6 @@ func (s *fixedKeySigner) GetPublicKey(_ context.Context) ([]byte, error) {
 	return crypto.CompressPubkey(&s.priv.PublicKey), nil
 }
 
-func (s *fixedKeySigner) evmAddr() common.Address {
-	return crypto.PubkeyToAddress(s.priv.PublicKey)
-}
-
 // TestParity_SignBridgeCheckpoint_Handler drives the full SignBridgeCheckpoint
 // handler with the golden inputs and asserts the recomputed checkpoint equals
 // the golden checkpoint (byte identical) and the returned signature is exactly

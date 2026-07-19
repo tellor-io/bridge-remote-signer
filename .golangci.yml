@@ -1,0 +1,21 @@
+version: "2"
+
+linters:
+  # standard = errcheck, govet, ineffassign, staticcheck, unused
+  default: standard
+  enable:
+    - gosec
+  settings:
+    gosec:
+      excludes:
+        # G304 (file path from variable): reading operator-configured key,
+        # state, and TLS paths is this daemon's job.
+        - G304
+  exclusions:
+    rules:
+      # Test cleanup (conn.Close etc.) doesn't need error handling;
+      # gosec G104 duplicates errcheck there.
+      - path: _test\.go
+        linters:
+          - errcheck
+          - gosec
