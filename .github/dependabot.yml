@@ -4,6 +4,8 @@ updates:
     directory: /
     schedule:
       interval: weekly
+    cooldown:
+      default-days: 30
 
   # Go modules: security updates only.
   - package-ecosystem: gomod
